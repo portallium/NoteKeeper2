@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.portallium.notekeeper">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        tools:replace="android:supportsRtl">
+
+        <activity android:name=".ui.list.ListActivity" />
+
+        <activity android:name=".ui.note.NoteActivity" />
+        <activity android:name=".ui.auth.FirebaseLoginActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- доподлинно неизвестно, пригодится ли мне еще когда-нибудь эта активность. вряд ли. -->
+
+        <meta-data
+            tools:replace="android:value"
+            android:name="io.fabric.ApiKey"
+            android:value="3ac9d74588a690f2692b64c0a0ae259458b7c012" />
+    </application>
+
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

@@ -1,0 +1,40 @@
+<resources>
+    <string name="app_name">Note Keeper</string>
+    <string name="title_activity_login">Sign in</string>
+
+    <string name="welcome">Welcome, %1$s</string>
+
+    <!-- Strings related to login -->
+    <string name="prompt_email">Email</string>
+    <string name="prompt_password">Password</string>
+    <string name="action_sign_in">Sign in or register</string>
+    <string name="action_sign_in_short">Sign in</string>
+    <string name="error_invalid_email">This email address is invalid</string>
+    <string name="error_invalid_password">This password is invalid</string>
+    <string name="toast_valid_password">The password must be at least 8 characters long and comprise only numbers and latin letters.</string>
+    <string name="error_incorrect_password">This password is incorrect</string>
+    <string name="error_field_required">This field is required</string>
+    <string name="permission_rationale">"Contacts permissions are needed for providing email
+        completions."
+    </string>
+
+
+    <string name="add_note">Add new note</string>
+    <string name="add_notepad">Add notepad</string>
+    <string name="dialog_set_title_hint">Note title</string>
+    <string name="dialog_set_text_hint">Note text</string>
+    <string name="dialog_create_note">Create new note</string>
+    <string name="dialog_duplicate_notepad">There is already a notepad called \"%1$s\"</string>
+    <string name="toast_empty_note">The note will not be created, because you did not specify neither its title nor text.</string>
+    <string name="toast_empty_notepad_title">A notepad cannot have an empty title. Operation failed.</string>
+    <string name="dialog_confirm_note_deletion_title">Confirm note deletion</string>
+    <string name="dialog_confirm_note_deletion_text">Do you want to delete the note \"%1$s\"?</string>
+    <string name="log_out">Log out</string>
+    <string name="notes_counter">Notes: %1$d</string>
+    <string name="notes_all">All notes</string>
+    <string name="go_to_notepads">Go to the list of notepads</string>
+    <string name="rename_notepad">Rename notepad</string>
+    <string name="create_notepad">Create new notepad</string>
+    <string name="title_activity_login_firebase">Sign in</string>
+    <string name="firebase_verification_required">Please verify your account before using Note Keeper. We\'ve sent an email to %1$s</string>
+</resources>
