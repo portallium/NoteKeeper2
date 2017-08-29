@@ -115,14 +115,13 @@ abstract class AbstractListFragment<T> extends Fragment {
     }
 
     //я пока не знаю, какие модификаторы доступа тут нужны, поэтому so far все package-private.
+    //todo: удалить этот класс. он получился довольно бесполезный, хотя метод bind тут к месту.
     abstract class AbstractViewHolder<E> extends RecyclerView.ViewHolder{
 
-        abstract void bind(E element);
+        public abstract void bind(E element);
 
-        //я пока не знаю, как мне этот layoutId передать.
         AbstractViewHolder (LayoutInflater inflater, ViewGroup parent, int layoutId) {
             super(inflater.inflate(layoutId, parent, false));
-            //возможно, тут будет еще что-то.
         }
     }
 

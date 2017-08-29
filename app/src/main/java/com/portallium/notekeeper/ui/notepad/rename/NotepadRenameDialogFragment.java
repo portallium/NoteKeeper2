@@ -45,11 +45,11 @@ public class NotepadRenameDialogFragment extends DialogFragment {
         View v = LayoutInflater.from(getActivity()).inflate(R.layout.dialog_rename_notepad, null);
 
         mNotepadTitle = v.findViewById(R.id.dialog_rename_notepad_edittext);
-
         mNotepad = (Notepad) getArguments().getSerializable(ARG_NOTEPAD);
         if (mNotepad != null) {
             mNotepadTitle.setText(mNotepad.getTitle());
         }
+
         return new AlertDialog.Builder(getActivity())
                 .setView(v)
                 .setTitle(R.string.rename_notepad)

@@ -13,13 +13,19 @@ import com.portallium.notekeeper.database.StorageKeeperCursorWrapper;
 import java.util.concurrent.ExecutionException;
 
 /**
- * В двух классах - NoteParametersPickerDialogFragment и NotesListFragment - требуется выполнять похожие операции.
+ * В двух классах - NoteParametersPickerDialogFragment и NotesListFragment - требуется выполнять похожие операции,
+ * связанные с функционированием спиннера. Этот класс написан для того, чтобы не повторять код дважды.
  */
-
 public class NotepadSpinnerHelper {
 
     private Cursor mNotepadsCursor;
 
+    /**
+     * @param context контекст, из которого будет производиться обращение к базам данных.
+     * @param userId локальный id авторизованного в системе пользователя.
+     * @param firebaseUserId firebase id авторизованного в системе пользователя.
+     * @return объект класса SimpleCursorAdapter, нужный для инициализации спиннера.
+     */
     public SimpleCursorAdapter createCursorAdapter(Context context, int userId, String firebaseUserId) {
         final StorageKeeper.GetUserNotepadsAsCursorTask task = StorageKeeper.getInstance(context, firebaseUserId).new GetUserNotepadsAsCursorTask();
         task.execute(userId);
@@ -40,15 +46,22 @@ public class NotepadSpinnerHelper {
         }
     }
 
+    /**
+     * Возвращает локальный id выбранного в спиннере блокнота.
+     * @param position позиция
+     * @return локальный id блокнота
+     */
     public int getNotepadIdBySpinnerPosition(int position) {
         mNotepadsCursor.moveToPosition(position);
         return mNotepadsCursor.getInt(mNotepadsCursor.getColumnIndex(DatabaseConstants.Notepads.Columns.NOTEPAD_ID));
     }
 
     /**
-     * Метод, нужный для инициализации спиннера.
+     * Выполняет операцию, обратную методу getNotepadIdBySpinnerPosition.
+     * Нужен для инициализации спиннера.
+     * @see #getNotepadIdBySpinnerPosition
      * @param notepadId id блокнота
-     * @return номер блокнота с данным id в списке блокнотов пользователя либо -1, если блокнота с данным id нет в списке
+     * @return позиция блокнота с данным id в спиннере либо -1, если блокнота с данным id нет в спиннере
      */
     public int getSpinnerPositionByNotepadId(int notepadId) {
         StorageKeeperCursorWrapper wrapper = new StorageKeeperCursorWrapper(mNotepadsCursor);

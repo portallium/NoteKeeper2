@@ -18,18 +18,37 @@ public class Notepad implements Serializable {
         mFirebaseId = firebaseId;
     }
 
+    /**
+     * Конструктор блокнота. Используется для парсинга существующего блокнота из SQLite.
+     * @param creatorId локальный id создателя блокнота
+     * @param title название блокнота
+     * @param creationDate unix-время создания блокнота (в миллисекундах)
+     * @param id локальный id блокнота
+     */
     public Notepad(int creatorId, String title, Date creationDate, int id) {
         this(creatorId, title, id);
         mCreationDate = creationDate;
         //firebaseId инициализируется как null. Это правильно. Это так и надо.
     }
 
+    /**
+     * Конструктор блокнота. Используется для создания фальшивого блокнота "all notes", откуда в UI
+     * открывается доступ ко всем заметкам пользователя.
+     * @param creatorId локальный id создателя блокнота
+     * @param title название блокнота
+     * @param id локальный id блокнота
+     */
     public Notepad(int creatorId, String title, int id) {
         this(creatorId, title);
         mId = id;
     }
 
-    //то же, что и для Note: id = -1 означает, что заметка еще не внесена в БД.
+    /**
+     * Первоначальный конструктор блокнота. поле mId инициализируется как -1, что означает, что
+     * блокнот пока не внесен в базу данных SQLite.
+     * @param creatorId локальный id создателя блокнота
+     * @param title название блокнота
+     */
     public Notepad(int creatorId, String title) {
         mCreatorId = creatorId;
         mTitle = title;
@@ -37,9 +56,7 @@ public class Notepad implements Serializable {
         mId = -1;
     }
 
-    public Notepad() {} //этот конструктор нужен Firebase.
-    //Было бы здорово сделать его приватным (там все равно рефлексия),
-    //но, видимо, нельзя.
+    private Notepad() {} //этот конструктор нужен Firebase.
 
     public int getCreatorId() {
         return mCreatorId;
@@ -73,6 +90,13 @@ public class Notepad implements Serializable {
         this.mFirebaseId = firebaseId;
     }
 
+    /**
+     * Метод, проверяющий идентичность двух блокнотов.
+     * Два блокнота идентичны, если все их поля, кроме mFirebaseId, равны между собой.
+     * Поле mFirebaseId в расчет не принимается.
+     * @param o блокнот, с которым производится сравнение.
+     * @return true, если блокноты идентичны, false иначе.
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -86,6 +110,10 @@ public class Notepad implements Serializable {
                 && mCreationDate.equals(notepad.mCreationDate));
     }
 
+    /**
+     * Метод подсчитывает хэш-код блокнота.
+     * @return хэш-код блокнота.
+     */
     @Override
     public int hashCode() {
         int result = mCreatorId;

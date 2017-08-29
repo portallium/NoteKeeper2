@@ -10,7 +10,10 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
 /**
- * Честно украдено из https://www.javacodegeeks.com/2012/05/secure-password-storage-donts-dos-and.html
+ * Метод, предоставляющий статические методы для шифрования и дешифрования строк с использованием алгоритма RSA.
+ * Используется для работы с паролями.
+ * @deprecated since commit #8
+ * {@link}https://www.javacodegeeks.com/2012/05/secure-password-storage-donts-dos-and.html
  */
 public final class PasswordEncryptionHelper {
 

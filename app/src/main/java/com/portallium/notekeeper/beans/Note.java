@@ -12,26 +12,37 @@ public class Note implements Serializable {
     private Date mCreationDate;
     private String mText;
 
-    private String mFirebaseId; //i regret everything.
+    private String mFirebaseId;
 
-    private Note() {} //такой конструктор нужен Firebase
+    private Note() {} //этот конструктор нужен firebase. В коде непосредственно не используется.
 
     public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseId) {
         this(id, notepadId, creatorId, title, creationDate, text);
         this.mFirebaseId = firebaseId;
     }
 
+    /**
+     * Конструктор заметки, использующийся при парсинге существующей заметки из SQLite.
+     * @param id локальный id заметки
+     * @param notepadId локальный id блокнота
+     * @param creatorId локальный id создателя заметки
+     * @param title название заметки
+     * @param creationDate unix-время создания заметки (в миллисекундах)
+     * @param text текст заметки
+     */
     public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text) {
-        this(id, notepadId, creatorId, title, text);
+        this(notepadId, creatorId, title, text);
+        this.mId = id;
         this.mCreationDate = creationDate;
     }
 
-    public Note(int id, int notepadId, int creatorId, String title, String text) {
-        this(notepadId, creatorId, title, text);
-        this.mId = id;
-    }
-
-    //-1 в поле id заметки означает, что она еще не добавлена в БД.
+    /**
+     * Первоначальный конструктор заметки.
+     * @param notepadId локальный id блокнота
+     * @param creatorId локальный id создателя заметки
+     * @param title название заметки
+     * @param text текст заметки
+     */
     public Note(int notepadId, int creatorId, String title, String text) {
         this.mId = -1;
         this.mNotepadId = notepadId;

@@ -28,14 +28,25 @@ public class NotesListFragment extends AbstractListFragment<Note> {
     private static final String ARG_NOTEPAD_ID = "notepadId";
     private static final String ARG_FIREBASE_ID = "firebaseId";
 
+    /**
+     * Максимально допустимая длина названия заметки в ее превью во ViewHolder. Значение = {@value}
+     */
     private static final int TITLE_PREVIEW_MAX_LENGTH = 30;
+    /**
+     * Максимально допустимая длина названия блокнота в его превью во ViewHolder. Значение = {@value}
+     */
     private static final int NOTEPAD_TITLE_PREVIEW_MAX_LENGTH = 20;
+    /**
+     * Максимально допустимая длина текста заметки в ее превью во ViewHolder. Значение = {@value}
+     */
     private static final int TEXT_PREVIEW_MAX_LENGTH = 60;
+    /**
+     * Максимально допустимое количество строк в превью текста заметки во ViewHolder. Значение = {@value}
+     */
     private static final int TEXT_PREVIEW_MAX_LINES = 3;
 
 
     public static NotesListFragment newInstance(int userId, int notepadId, String firebaseId) {
-
         Bundle args = new Bundle();
         args.putInt(ARG_USER_ID, userId);
         args.putInt(ARG_NOTEPAD_ID, notepadId);
@@ -92,7 +103,7 @@ public class NotesListFragment extends AbstractListFragment<Note> {
         private Note mNote;
 
         @Override
-        void bind(Note element) {
+        public void bind(Note element) {
             mNote = element;
 
             StorageKeeper.GetNotepadTitleByIdTask task = StorageKeeper.getInstance(getActivity(), getArguments().getString(ARG_FIREBASE_ID)).new GetNotepadTitleByIdTask();
@@ -177,7 +188,6 @@ public class NotesListFragment extends AbstractListFragment<Note> {
                     return true;
                 }
             });
-            //TODO: добавить удаление по свайпу
         }
     }
 

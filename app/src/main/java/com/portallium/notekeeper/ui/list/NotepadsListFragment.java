@@ -71,7 +71,7 @@ public class NotepadsListFragment extends AbstractListFragment<Notepad> {
         private Notepad mNotepad;
 
         @Override
-        void bind(Notepad element) {
+        public void bind(Notepad element) {
             //логика вывода. Вероятно, запрос к БД на количество заметок нужен здесь.
             mNotepad = element;
 
@@ -93,7 +93,7 @@ public class NotepadsListFragment extends AbstractListFragment<Notepad> {
             mNotepadNotesCounter.setText(String.format(getString(R.string.notes_counter), notesCounter));
         }
 
-        public NotepadViewHolder(LayoutInflater inflater, ViewGroup parent, int layoutId) {
+        NotepadViewHolder(LayoutInflater inflater, ViewGroup parent, int layoutId) {
             super(inflater, parent, layoutId);
             //инициализация компонентов макета
             mNotepadTitlePreview = itemView.findViewById(R.id.holder_notepad_title);
@@ -114,8 +114,7 @@ public class NotepadsListFragment extends AbstractListFragment<Notepad> {
                     return true;
                 }
             });
-            //TODO: научиться удалять блокноты по свайпу.
-
+            //TODO: научиться удалять блокноты. Например, добавить в диалог NotepadRenameDialogFragment такую возможность.
         }
     }
 }

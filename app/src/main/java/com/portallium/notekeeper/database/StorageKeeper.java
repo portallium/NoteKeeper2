@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Это синглтон, сквозь который проходят все запросы всех фрагментов как к базе данных SQLite, так и к Firebase.
+ * Синглтон, сквозь который проходят все запросы всех фрагментов как к базе данных SQLite, так и к Firebase.
  */
 public class StorageKeeper {
     private static final String DEFAULT_NOTEPAD_TITLE = "Default";
@@ -45,6 +45,12 @@ public class StorageKeeper {
         mReference = FirebaseDatabase.getInstance().getReference();
     }
 
+    /**
+     * Статический метод, используемый для доступа к единственному объекту класса.
+     * @param context контекст, из которого вызывается метод. Например, активность.
+     * @param currentUserFirebaseId firebase id залогиненного в приложение пользователя.
+     * @return экземпляр класса StorageKeeper, через который производится доступ к базе данных.
+     */
     public static StorageKeeper getInstance(Context context, String currentUserFirebaseId) {
         if (instance == null) {
             instance = new StorageKeeper(context);
@@ -63,6 +69,7 @@ public class StorageKeeper {
     private int addUser(String email, String password)
     {
         try {
+            //todo: окончательно избавиться от наследия прошлой системы авторизации.
             byte[] salt = PasswordEncryptionHelper.generateSalt();
             byte[] encryptedPassword = PasswordEncryptionHelper.getEncryptedPassword(password, salt);
             ContentValues values = new ContentValues();
@@ -98,7 +105,10 @@ public class StorageKeeper {
                 null, null, null);
     }
 
-
+    /**
+     * При вызове метода execute(email) в отдельном потоке запускается метод, вычисляющий локальный id
+     * пользователя с данным email. Вызов метода get() вернет этот id.
+     */
     public class GetUserIdByEmailTask extends AsyncTask<String, Void, Integer> {
         @Override
         protected Integer doInBackground(String... email) {
@@ -128,10 +138,16 @@ public class StorageKeeper {
         }
     }
 
+    /**
+     * При вызове метода execute(notepad) в отдельном потоке запускается метод, добавляющий в базы данных SQLite и
+     * Firebase данный блокнот. Вызов метода get() вернет id добавленного блокнота.
+     */
     public class AddNotepadToDatabaseTask extends AsyncTask<Notepad, Void, Integer> {
         @Override
-        protected Integer doInBackground(Notepad... notepads) {
-            return addNotepadToDatabase(notepads[0]);
+        protected Integer doInBackground(Notepad... notepad) {
+            if (notepad.length != 1)
+                throw new InvalidParameterException (notepad.length + " parameters passed, expected 1");
+            return addNotepadToDatabase(notepad[0]);
         }
     }
 
@@ -180,10 +196,16 @@ public class StorageKeeper {
         }
     }
 
+    /**
+     * При вызове метода execute(notepad) в отдельном потоке запускается метод, добавляющий в базы данных SQLite и
+     * Firebase данную заметку. Вызов метода get() вернет id добавленной заметки.
+     */
     public class AddNoteToDatabaseTask extends AsyncTask<Note, Void, Integer> {
         @Override
-        protected Integer doInBackground(Note... notes) {
-            return addNoteToDatabase(notes[0]);
+        protected Integer doInBackground(Note... note) {
+            if (note.length != 1)
+                throw new InvalidParameterException(note.length + " parameters passed, expected 1");
+            return addNoteToDatabase(note[0]);
         }
     }
 
@@ -223,10 +245,17 @@ public class StorageKeeper {
         }
     }
 
+    /**
+     * При вызове метода execute(userId) в отдельном потоке запускается метод, возвращающий
+     * все блокноты пользователя с данным id в виде списка.
+     * Вызов метода get() вернет полученный список.
+     */
     public class GetUserNotepadsAsListTask extends AsyncTask<Integer, Void, List<Notepad>> {
         @Override
-        protected List<Notepad> doInBackground(Integer... integers) {
-            return getUserNotepadsAsList(integers[0]);
+        protected List<Notepad> doInBackground(Integer... userId) {
+            if (userId.length != 1)
+                throw new InvalidParameterException (userId.length + " parameters passed, expected 1");
+            return getUserNotepadsAsList(userId[0]);
         }
     }
 
@@ -242,9 +271,16 @@ public class StorageKeeper {
         }
     }
 
+    /**
+     * При вызове метода execute(userId, notepadId) в отдельном потоке запускается метод, возвращающий
+     * в виде списка все заметки пользователя с данным userId из блокнота с данным notepadId.
+     * Вызов метода get() вернет полученный список.
+     */
     public class GetUserNotesAsListTask extends AsyncTask<Integer, Void, List<Note>> {
         @Override
         protected List<Note> doInBackground(Integer... integers) {
+            if (integers.length != 2)
+                throw new InvalidParameterException (integers.length + " parameters passed, expected 2");
             return getUserNotesAsList(integers[0], integers[1]);
         }
     }
@@ -305,10 +341,17 @@ public class StorageKeeper {
         );
     }
 
+    /**
+     * При вызове метода execute(userId) в отдельном потоке запускается метод, возвращающий
+     * все блокноты пользователя с данным id в виде курсора.
+     * Вызов метода get() вернет полученный курсор.
+     */
     public class GetUserNotepadsAsCursorTask extends AsyncTask<Integer, Void, Cursor> {
         @Override
-        protected Cursor doInBackground(Integer... integers) {
-            return getUserNotepadsAsCursor(integers[0]);
+        protected Cursor doInBackground(Integer... userId) {
+            if (userId.length != 1)
+                throw new InvalidParameterException (userId.length + " parameters passed, expected 1");
+            return getUserNotepadsAsCursor(userId[0]);
         }
     }
 
@@ -328,64 +371,108 @@ public class StorageKeeper {
         );
     }
 
+    /**
+     * При вызове метода execute(note) в отдельном потоке запускается метод, изменяющий значения данной заметки
+     * в базах данных SQLite и Firebase на переданные.
+     */
     public class UpdateNoteTask extends AsyncTask <Note, Void, Void> {
         @Override
-        protected Void doInBackground(Note... notes) {
-            updateNote(notes[0]);
+        protected Void doInBackground(Note... note) {
+            if (note.length != 1)
+                throw new InvalidParameterException (note.length + " parameters passed, expected 1");
+            updateNote(note[0]);
             return null; //выглядит, конечно, ужасно, но что поделать.
         }
     }
 
     private void updateNote(Note note) {
+        String firebaseNoteKey = getFirebaseNoteKeyByCursor(getCursorByNoteId(note.getId()));
+
         mDatabase.update(
                 DatabaseConstants.Notes.TABLE_NAME,
                 parseNoteToContentValues(note),
                 DatabaseConstants.Notes.Columns.NOTE_ID + " = ? ",
                 new String[] {Integer.toString(note.getId())}
         );
-        //todo: update in firebase
+
+        if (firebaseNoteKey != null) {
+            updateNoteInFirebase(mCurrentUserFirebaseId, firebaseNoteKey, note);
+        }
     }
 
+    /**
+     * При вызове метода execute(notepad) в отдельном потоке запускается метод, изменяющий значения данного блокнота
+     * в базах данных SQLite и Firebase на переданные.
+     */
     public class UpdateNotepadTask extends AsyncTask<Notepad, Void, Void> {
         @Override
-        protected Void doInBackground(Notepad... notepads) {
-            updateNotepad(notepads[0]);
+        protected Void doInBackground(Notepad... notepad) {
+            if (notepad.length != 1)
+                throw new InvalidParameterException (notepad.length + " parameters passed, expected 1");
+            updateNotepad(notepad[0]);
             return null;
         }
     }
 
     private void updateNotepad(Notepad notepad) {
+        String firebaseNotepadKey = getFirebaseNotepadKeyByCursor(getCursorByNotepadId(notepad.getId()));
+
         mDatabase.update(
                 DatabaseConstants.Notepads.TABLE_NAME,
                 parseNotepadToContentValues(notepad),
                 DatabaseConstants.Notepads.Columns.NOTEPAD_ID + " = ?",
                 new String[]{Integer.toString(notepad.getId())}
         );
-        //todo: update in firebase
+
+        if (firebaseNotepadKey != null) {
+            updateNotepadInFirebase(mCurrentUserFirebaseId, firebaseNotepadKey, notepad);
+        }
     }
 
+
+    /**
+     * При вызове метода execute(note) в отдельном потоке запускается метод, удаляющий заметку с данным noteId
+     * из баз данных SQLite и Firebase.
+     */
     public class DeleteNoteTask extends AsyncTask<Integer, Void, Void> {
         @Override
-        protected Void doInBackground(Integer... integers) {
-            deleteNote(integers[0]);
+        protected Void doInBackground(Integer... noteId) {
+            if (noteId.length != 1)
+                throw new InvalidParameterException (noteId.length + " parameters passed, expected 1");
+            deleteNote(noteId[0]);
             return null;
         }
     }
 
     private void deleteNote(int noteId){
+        //найти ключ firebase
+        String firebaseNoteKey = getFirebaseNoteKeyByCursor(getCursorByNoteId(noteId));
+
+        //удалить из sqlite
         mDatabase.delete(
                 DatabaseConstants.Notes.TABLE_NAME,
                 DatabaseConstants.Notes.Columns.NOTE_ID + " = ? ",
                 new String[]{Integer.toString(noteId)}
         );
-        //todo: delete from firebase
+
+        //удалить из firebase
+        if (firebaseNoteKey != null) {
+            deleteNoteFromFirebase(mCurrentUserFirebaseId, firebaseNoteKey);
+        }
     }
 
+    /**
+     * При вызове метода execute(notepadId) в отдельном потоке запускается метод, возвращающий название
+     * блокнота с данным notepadId.
+     * Вызов метода get() вернет полученное название.
+     */
     public class GetNotepadTitleByIdTask extends AsyncTask<Integer, Void, String> {
         @Override
-        protected String doInBackground(Integer... integers) {
+        protected String doInBackground(Integer... notepadId) {
             try {
-                return getNotepadTitleById(integers[0]);
+                if (notepadId.length != 1)
+                    throw new InvalidParameterException (notepadId.length + " parameters passed, expected 1");
+                return getNotepadTitleById(notepadId[0]);
             }
             catch (NoSuchNotepadException ex) {
                 Log.e("Getting notepad title", ex.getMessage(), ex);
@@ -406,6 +493,40 @@ public class StorageKeeper {
             cursor.moveToFirst();
             return cursor.getString(cursor.getColumnIndex(DatabaseConstants.Notepads.Columns.TITLE));
         }
+    }
+
+    private Cursor getCursorByNoteId(int noteId) {
+        return mDatabase.query(
+                DatabaseConstants.Notes.TABLE_NAME,
+                null,
+                DatabaseConstants.Notes.Columns.NOTE_ID + " = ?",
+                new String[]{Integer.toString(noteId)},
+                null, null, null
+        );
+    }
+
+    private String getFirebaseNoteKeyByCursor(Cursor noteCursor) {
+        noteCursor.moveToFirst();
+        String firebaseNoteKey = noteCursor.getString(noteCursor.getColumnIndex(DatabaseConstants.Notes.Columns.FIREBASE_ID));
+        noteCursor.close();
+        return firebaseNoteKey;
+    }
+
+    private Cursor getCursorByNotepadId(int notepadId) {
+        return mDatabase.query(
+                DatabaseConstants.Notepads.TABLE_NAME,
+                null,
+                DatabaseConstants.Notepads.Columns.NOTEPAD_ID + " = ? ",
+                new String[]{Integer.toString(notepadId)},
+                null, null, null
+        );
+    }
+
+    private String getFirebaseNotepadKeyByCursor(Cursor notepadCursor) {
+        notepadCursor.moveToFirst();
+        String firebaseNotepadKey = notepadCursor.getString(notepadCursor.getColumnIndex(DatabaseConstants.Notepads.Columns.FIREBASE_ID));
+        notepadCursor.close();
+        return firebaseNotepadKey;
     }
 
     private ContentValues parseNoteToContentValues(Note note) {
@@ -437,12 +558,12 @@ public class StorageKeeper {
 
     /**
      * Добавляет блокнот в базу данных firebase.
-     * @param firebaseId уникальный идентификатор пользователя, который генерирует firebase.
+     * @param firebaseUserId уникальный идентификатор пользователя, который генерирует firebase.
      *                   {@link} https://firebase.google.com/docs/reference/android/com/google/firebase/auth/FirebaseUser.html#getUid()
      * @param notepad объект класса Notepad, который будет сохранен в базе данных.
      */
-    private void addNotepadToFirebase(String firebaseId, final Notepad notepad) {
-        mReference.child(firebaseId).child(DatabaseConstants.Notepads.TABLE_NAME).push().setValue(parseNotepadToMap(notepad), new DatabaseReference.CompletionListener() {
+    private void addNotepadToFirebase(String firebaseUserId, final Notepad notepad) {
+        mReference.child(firebaseUserId).child(DatabaseConstants.Notepads.TABLE_NAME).push().setValue(parseNotepadToMap(notepad), new DatabaseReference.CompletionListener() {
             @Override
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
                 Log.d("New notepad added", "key = " + databaseReference.getKey());
@@ -451,8 +572,6 @@ public class StorageKeeper {
             }
         });
     }
-    //todo: добавить два listener'а: на child notes и на notepads
-    //TODO: добавить методы обновления и удаления заметок.
 
     //Важное замечание.
     //1. Если отключить интернет, создать заметку и включить интернет, то заметка сохранится в firebase.
@@ -464,12 +583,12 @@ public class StorageKeeper {
 
     /**
      * Добавляет заметку в базу данных firebase.
-     * @param firebaseId уникальный идентификатор пользователя, который генерирует firebase.
+     * @param firebaseUserId уникальный идентификатор пользователя, который генерирует firebase.
      *                   {@link} https://firebase.google.com/docs/reference/android/com/google/firebase/auth/FirebaseUser.html#getUid()
      * @param note объект класса Note, который будет сохранен в базе данных.
      */
-    private void addNoteToFirebase(String firebaseId, final Note note) {
-        mReference.child(firebaseId).child(DatabaseConstants.Notes.TABLE_NAME).push().setValue(parseNoteToMap(note), new DatabaseReference.CompletionListener() {
+    private void addNoteToFirebase(String firebaseUserId, final Note note) {
+        mReference.child(firebaseUserId).child(DatabaseConstants.Notes.TABLE_NAME).push().setValue(parseNoteToMap(note), new DatabaseReference.CompletionListener() {
             @Override
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
                 Log.d("New note added", "key = " + databaseReference.getKey());
@@ -480,11 +599,16 @@ public class StorageKeeper {
         });
     }
 
-    public void deleteNoteFromFirebase(String firebaseId, String firebaseNoteKey) {
-        //только вот где это значение firebaseNoteKey взять?
-        //первый пришедший в голову вариант - добавить в SQLite колонку "firebaseId", что очень плохая идея.
-        //она, конечно, позволит сэкономить некоторые вычислительные мощности, но тем не менее.
-        mReference.child(firebaseId).child(DatabaseConstants.Notes.TABLE_NAME).child(firebaseNoteKey).removeValue();
+    private void deleteNoteFromFirebase(String firebaseUserId, String firebaseNoteKey) {
+        mReference.child(firebaseUserId).child(DatabaseConstants.Notes.TABLE_NAME).child(firebaseNoteKey).removeValue();
+    }
+
+    private void updateNoteInFirebase(String firebaseUserId, String firebaseNoteKey, final Note note) {
+        mReference.child(firebaseUserId).child(DatabaseConstants.Notes.TABLE_NAME).child(firebaseNoteKey).setValue(parseNoteToMap(note));
+    }
+
+    private void updateNotepadInFirebase(String firebaseUserId, String firebaseNotepadKey, final Notepad notepad) {
+        mReference.child(firebaseUserId).child(DatabaseConstants.Notepads.TABLE_NAME).child(firebaseNotepadKey).setValue(parseNotepadToMap(notepad));
     }
 
     private Map<String, Object> parseNotepadToMap(Notepad notepad) {

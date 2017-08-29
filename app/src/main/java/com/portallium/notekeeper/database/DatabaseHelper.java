@@ -55,7 +55,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     /**
      * Обновляет базу данных, если на пользовательском девайсе обнаружена устаревшая схема.
-     * В частности, добавляет колонки firebase_id, потому что их для синхронизации придется хранить в SQLite.
+     * В частности, при обновлении с версии 1 до версии 2
+     * добавляет колонки firebase_id, потому что их для синхронизации приходится хранить в SQLite.
      */
     @Override
     public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
