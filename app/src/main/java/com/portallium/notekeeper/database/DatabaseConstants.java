@@ -31,6 +31,7 @@ public final class DatabaseConstants {
             public static final String CREATOR_ID = "user_id";
             public static final String TITLE = "title";
             public static final String CREATION_DATE = "creation_date";
+            public static final String FIREBASE_ID = "firebase_id";
         }
     }
 
@@ -47,6 +48,7 @@ public final class DatabaseConstants {
             public static final String TITLE = "title";
             public static final String CREATION_DATE = "creation_date";
             public static final String TEXT = "text";
+            public static final String FIREBASE_ID = "firebase_id";
         }
     }
 }

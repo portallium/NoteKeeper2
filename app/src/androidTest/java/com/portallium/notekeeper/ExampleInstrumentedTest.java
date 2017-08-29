@@ -9,6 +9,8 @@ import org.junit.runner.RunWith;
 
 import static org.junit.Assert.*;
 
+//TODO: мне очень, очень, вот-прям-очень надо написать тесты к моей куче кода.
+
 /**
  * Instrumentation test, which will execute on an Android device.
  *

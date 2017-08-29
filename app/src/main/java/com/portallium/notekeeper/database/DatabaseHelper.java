@@ -3,10 +3,11 @@ package com.portallium.notekeeper.database;
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
-    private static final int VERSION = 1;
+    private static final int VERSION = 2; //
     private static final String DATABASE_NAME = "noteKeeperDatabase.db";
 
     public DatabaseHelper(Context context) {
@@ -33,7 +34,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         " (" + DatabaseConstants.Notepads.Columns.NOTEPAD_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                         DatabaseConstants.Notepads.Columns.CREATOR_ID + " INTEGER, " +
                         DatabaseConstants.Notepads.Columns.TITLE + ", " +
-                        DatabaseConstants.Notepads.Columns.CREATION_DATE + ", FOREIGN KEY (" +
+                        DatabaseConstants.Notepads.Columns.CREATION_DATE + ", " +
+                        DatabaseConstants.Notepads.Columns.FIREBASE_ID + " TEXT DEFAULT NULL, FOREIGN KEY (" +
                         DatabaseConstants.Notepads.Columns.CREATOR_ID + ") REFERENCES " +
                         DatabaseConstants.Users.TABLE_NAME + " (" + DatabaseConstants.Users.Columns.ID + "));");
 
@@ -43,7 +45,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         DatabaseConstants.Notes.Columns.CREATOR_ID + " INTEGER, " +
                         DatabaseConstants.Notes.Columns.TITLE + ", " +
                         DatabaseConstants.Notes.Columns.CREATION_DATE + ", " +
-                        DatabaseConstants.Notes.Columns.TEXT + ", FOREIGN KEY (" +
+                        DatabaseConstants.Notes.Columns.TEXT + ", " +
+                        DatabaseConstants.Notes.Columns.FIREBASE_ID + " TEXT DEFAULT NULL, FOREIGN KEY (" +
                         DatabaseConstants.Notes.Columns.NOTEPAD_ID + ") REFERENCES " +
                         DatabaseConstants.Notepads.TABLE_NAME + " (" + DatabaseConstants.Notepads.Columns.NOTEPAD_ID + "), " +
                         "FOREIGN KEY (" + DatabaseConstants.Notes.Columns.CREATOR_ID + ") REFERENCES " +
@@ -51,8 +54,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     /**
-     * Метод пуст, потому что ситуации с возможным обновлением схемы БД пока не ожидается.
+     * Обновляет базу данных, если на пользовательском девайсе обнаружена устаревшая схема.
+     * В частности, добавляет колонки firebase_id, потому что их для синхронизации придется хранить в SQLite.
      */
     @Override
-    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {}
+    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
+        switch (oldVersion) {
+            case 1: {
+                sqLiteDatabase.execSQL("ALTER TABLE " + DatabaseConstants.Notepads.TABLE_NAME + " ADD COLUMN " +
+                        DatabaseConstants.Notepads.Columns.FIREBASE_ID + " TEXT DEFAULT NULL");
+                sqLiteDatabase.execSQL("ALTER TABLE " + DatabaseConstants.Notes.TABLE_NAME + " ADD COLUMN " +
+                        DatabaseConstants.Notes.Columns.FIREBASE_ID + " TEXT DEFAULT NULL");
+                Log.d("Updating DB schema", "from v.1 to v.2");
+                break;
+            }
+            default: {
+                throw new IllegalStateException("onUpgrade() called with unknown oldVersion " + oldVersion);
+            }
+        }
+    }
 }

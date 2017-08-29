@@ -26,6 +26,7 @@ public class NotesListFragment extends AbstractListFragment<Note> {
 
     private static final String ARG_USER_ID = "userId";
     private static final String ARG_NOTEPAD_ID = "notepadId";
+    private static final String ARG_FIREBASE_ID = "firebaseId";
 
     private static final int TITLE_PREVIEW_MAX_LENGTH = 30;
     private static final int NOTEPAD_TITLE_PREVIEW_MAX_LENGTH = 20;
@@ -33,11 +34,12 @@ public class NotesListFragment extends AbstractListFragment<Note> {
     private static final int TEXT_PREVIEW_MAX_LINES = 3;
 
 
-    public static NotesListFragment newInstance(int userId, int notepadId) {
+    public static NotesListFragment newInstance(int userId, int notepadId, String firebaseId) {
 
         Bundle args = new Bundle();
         args.putInt(ARG_USER_ID, userId);
         args.putInt(ARG_NOTEPAD_ID, notepadId);
+        args.putString(ARG_FIREBASE_ID, firebaseId);
         NotesListFragment fragment = new NotesListFragment();
         fragment.setArguments(args);
         return fragment;
@@ -50,7 +52,7 @@ public class NotesListFragment extends AbstractListFragment<Note> {
 
     @Override
     List<Note> getElementsListFromDatabase() {
-        StorageKeeper.GetUserNotesAsListTask getNotesTask = StorageKeeper.getInstance(getActivity()).new GetUserNotesAsListTask();
+        StorageKeeper.GetUserNotesAsListTask getNotesTask = StorageKeeper.getInstance(getActivity(), getArguments().getString(ARG_FIREBASE_ID)).new GetUserNotesAsListTask();
         getNotesTask.execute(NotesListFragment.this.getArguments().getInt(ARG_USER_ID), NotesListFragment.this.getArguments().getInt(ARG_NOTEPAD_ID));
         try {
             return getNotesTask.get();
@@ -70,7 +72,7 @@ public class NotesListFragment extends AbstractListFragment<Note> {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.icon_go_to_notepads) { //иконка появляется только в этом фрагменте
-            NotepadsListFragment fragment = NotepadsListFragment.newInstance(getArguments().getInt(ARG_USER_ID));
+            NotepadsListFragment fragment = NotepadsListFragment.newInstance(getArguments().getInt(ARG_USER_ID), getArguments().getString(ARG_FIREBASE_ID));
             getActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).commit();
             return true;
         } else if (item.getItemId() == R.id.icon_new_note) {
@@ -93,7 +95,7 @@ public class NotesListFragment extends AbstractListFragment<Note> {
         void bind(Note element) {
             mNote = element;
 
-            StorageKeeper.GetNotepadTitleByIdTask task = StorageKeeper.getInstance(getActivity()).new GetNotepadTitleByIdTask();
+            StorageKeeper.GetNotepadTitleByIdTask task = StorageKeeper.getInstance(getActivity(), getArguments().getString(ARG_FIREBASE_ID)).new GetNotepadTitleByIdTask();
             task.execute(mNote.getNotepadId());
 
             String titlePreview = mNote.getTitle().trim();
@@ -147,7 +149,7 @@ public class NotesListFragment extends AbstractListFragment<Note> {
                 @Override
                 public void onClick(View view) {
                     Log.d("Starting NoteActivity", "Note clicked");
-                    startActivity(NoteActivity.getIntent(getActivity(), mNote));
+                    startActivity(NoteActivity.getIntent(getActivity(), mNote, getArguments().getString(ARG_FIREBASE_ID)));
                 }
             });
             itemView.setOnLongClickListener(new View.OnLongClickListener() {
@@ -159,7 +161,7 @@ public class NotesListFragment extends AbstractListFragment<Note> {
                             .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialogInterface, int i) {
-                                    StorageKeeper.DeleteNoteTask deleteNoteTask = StorageKeeper.getInstance(getActivity()).new DeleteNoteTask();
+                                    StorageKeeper.DeleteNoteTask deleteNoteTask = StorageKeeper.getInstance(getActivity(), getArguments().getString(ARG_FIREBASE_ID)).new DeleteNoteTask();
                                     deleteNoteTask.execute(mNote.getId());
                                     updateUI();
                                 }

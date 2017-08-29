@@ -7,6 +7,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.portallium.notekeeper.beans.Note;
 import com.portallium.notekeeper.beans.Notepad;
 import com.portallium.notekeeper.exceptions.DuplicateUsersException;
@@ -18,13 +21,13 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Это синглтон, сквозь который проходят все запросы всех фрагментов к базе данных.
- * Не знаю, хорош ли такой подход, но я видел его в одном туториале.
+ * Это синглтон, сквозь который проходят все запросы всех фрагментов как к базе данных SQLite, так и к Firebase.
  */
-
 public class StorageKeeper {
     private static final String DEFAULT_NOTEPAD_TITLE = "Default";
     private static final String DEFAULT_NOTE_TITLE = "Welcome to Note Keeper!";
@@ -34,14 +37,19 @@ public class StorageKeeper {
 
     private SQLiteDatabase mDatabase;
 
+    private DatabaseReference mReference;
+    private String mCurrentUserFirebaseId;
+
     private StorageKeeper(Context context) {
         mDatabase = new DatabaseHelper(context.getApplicationContext()).getWritableDatabase();
+        mReference = FirebaseDatabase.getInstance().getReference();
     }
 
-    public static StorageKeeper getInstance(Context context) {
+    public static StorageKeeper getInstance(Context context, String currentUserFirebaseId) {
         if (instance == null) {
             instance = new StorageKeeper(context);
         }
+        instance.mCurrentUserFirebaseId = currentUserFirebaseId;
         return instance;
     }
 
@@ -133,6 +141,7 @@ public class StorageKeeper {
      * @return id созданного блокнота
      */
     private int addNotepadToDatabase(Notepad notepad) {
+        //проверяем наличие в SQLite блокнота с данным названием: его быть не должно
         try (Cursor notepadsWithIdenticalNameCursor = mDatabase.query(
                 DatabaseConstants.Notepads.TABLE_NAME,
                 null,
@@ -162,6 +171,11 @@ public class StorageKeeper {
             newNotepadCursor.moveToFirst();
             int newNotepadId = newNotepadCursor.getInt(newNotepadCursor.getColumnIndex(DatabaseConstants.Notepads.Columns.NOTEPAD_ID));
             notepad.setId(newNotepadId);
+
+            //добавляем блокнот в firebase.
+            //важно понимать, что, даже если нет интернета, выполнение завершается. firebase сильно умнее, чем я думал.
+            addNotepadToFirebase(mCurrentUserFirebaseId, notepad);
+
             return newNotepadId;
         }
     }
@@ -201,6 +215,10 @@ public class StorageKeeper {
             newNoteCursor.moveToFirst();
             int newNoteId = newNoteCursor.getInt(newNoteCursor.getColumnIndex(DatabaseConstants.Notes.Columns.NOTE_ID));
             note.setId(newNoteId); //Как только заметка добавляется в БД, она получает id.
+
+            //добавляем заметку в firebase
+            addNoteToFirebase(mCurrentUserFirebaseId, note);
+
             return newNoteId;
         }
     }
@@ -325,6 +343,7 @@ public class StorageKeeper {
                 DatabaseConstants.Notes.Columns.NOTE_ID + " = ? ",
                 new String[] {Integer.toString(note.getId())}
         );
+        //todo: update in firebase
     }
 
     public class UpdateNotepadTask extends AsyncTask<Notepad, Void, Void> {
@@ -342,6 +361,7 @@ public class StorageKeeper {
                 DatabaseConstants.Notepads.Columns.NOTEPAD_ID + " = ?",
                 new String[]{Integer.toString(notepad.getId())}
         );
+        //todo: update in firebase
     }
 
     public class DeleteNoteTask extends AsyncTask<Integer, Void, Void> {
@@ -358,6 +378,7 @@ public class StorageKeeper {
                 DatabaseConstants.Notes.Columns.NOTE_ID + " = ? ",
                 new String[]{Integer.toString(noteId)}
         );
+        //todo: delete from firebase
     }
 
     public class GetNotepadTitleByIdTask extends AsyncTask<Integer, Void, String> {
@@ -395,6 +416,10 @@ public class StorageKeeper {
         values.put(DatabaseConstants.Notes.Columns.TITLE, note.getTitle());
         values.put(DatabaseConstants.Notes.Columns.TEXT, note.getText());
         values.put(DatabaseConstants.Notes.Columns.CREATION_DATE, note.getCreationDate().getTime());
+        if (note.getFirebaseId() != null) {
+            values.put(DatabaseConstants.Notes.Columns.FIREBASE_ID, note.getFirebaseId());
+        }
+        //иначе там останется NULL, верно?
         return values;
     }
 
@@ -404,6 +429,81 @@ public class StorageKeeper {
         values.put(DatabaseConstants.Notepads.Columns.CREATOR_ID, notepad.getCreatorId());
         values.put(DatabaseConstants.Notepads.Columns.TITLE, notepad.getTitle());
         values.put(DatabaseConstants.Notepads.Columns.CREATION_DATE, notepad.getCreationDate().getTime());
+        if (notepad.getFirebaseId() != null) {
+            values.put(DatabaseConstants.Notepads.Columns.FIREBASE_ID, notepad.getFirebaseId());
+        }
         return values;
+    }
+
+    /**
+     * Добавляет блокнот в базу данных firebase.
+     * @param firebaseId уникальный идентификатор пользователя, который генерирует firebase.
+     *                   {@link} https://firebase.google.com/docs/reference/android/com/google/firebase/auth/FirebaseUser.html#getUid()
+     * @param notepad объект класса Notepad, который будет сохранен в базе данных.
+     */
+    private void addNotepadToFirebase(String firebaseId, final Notepad notepad) {
+        mReference.child(firebaseId).child(DatabaseConstants.Notepads.TABLE_NAME).push().setValue(parseNotepadToMap(notepad), new DatabaseReference.CompletionListener() {
+            @Override
+            public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
+                Log.d("New notepad added", "key = " + databaseReference.getKey());
+                notepad.setFirebaseId(databaseReference.getKey());
+                updateNotepad(notepad);
+            }
+        });
+    }
+    //todo: добавить два listener'а: на child notes и на notepads
+    //TODO: добавить методы обновления и удаления заметок.
+
+    //Важное замечание.
+    //1. Если отключить интернет, создать заметку и включить интернет, то заметка сохранится в firebase.
+    //2. Если отключить интернет, создать заметку, закрыть приложение, включить интернет и открыть приложение, заметка будет потеряна.
+    //Она сохранится в SQLite, но firebase о ней никогда не узнает.
+    //вывод. TODO: нужен метод синхронизации: при авторизации проверять наличие в sqlite заметок, которых нет в firebase, и отправлять их туда.
+    //TODO: обратный процесс тоже нужен.
+    //TODO: как насчет добавления во ViewHolder'ы индикатора синхронизированности? Какой-нибудь логотип напротив данных о заметке (и блокноте тоже.)
+
+    /**
+     * Добавляет заметку в базу данных firebase.
+     * @param firebaseId уникальный идентификатор пользователя, который генерирует firebase.
+     *                   {@link} https://firebase.google.com/docs/reference/android/com/google/firebase/auth/FirebaseUser.html#getUid()
+     * @param note объект класса Note, который будет сохранен в базе данных.
+     */
+    private void addNoteToFirebase(String firebaseId, final Note note) {
+        mReference.child(firebaseId).child(DatabaseConstants.Notes.TABLE_NAME).push().setValue(parseNoteToMap(note), new DatabaseReference.CompletionListener() {
+            @Override
+            public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
+                Log.d("New note added", "key = " + databaseReference.getKey());
+                //я надеюсь, референс указывает на добавленный объект
+                note.setFirebaseId(databaseReference.getKey());
+                updateNote(note);
+            }
+        });
+    }
+
+    public void deleteNoteFromFirebase(String firebaseId, String firebaseNoteKey) {
+        //только вот где это значение firebaseNoteKey взять?
+        //первый пришедший в голову вариант - добавить в SQLite колонку "firebaseId", что очень плохая идея.
+        //она, конечно, позволит сэкономить некоторые вычислительные мощности, но тем не менее.
+        mReference.child(firebaseId).child(DatabaseConstants.Notes.TABLE_NAME).child(firebaseNoteKey).removeValue();
+    }
+
+    private Map<String, Object> parseNotepadToMap(Notepad notepad) {
+        Map<String, Object> map = new HashMap<>();
+        map.put(DatabaseConstants.Notepads.Columns.NOTEPAD_ID, notepad.getId());
+        map.put(DatabaseConstants.Notepads.Columns.CREATOR_ID, notepad.getCreatorId());
+        map.put(DatabaseConstants.Notepads.Columns.TITLE, notepad.getTitle());
+        map.put(DatabaseConstants.Notepads.Columns.CREATION_DATE, notepad.getCreationDate().getTime());
+        return map;
+    }
+
+    private Map<String, Object> parseNoteToMap(Note note) {
+        Map<String, Object> map = new HashMap<>();
+        map.put(DatabaseConstants.Notes.Columns.NOTE_ID, note.getId());
+        map.put(DatabaseConstants.Notes.Columns.NOTEPAD_ID, note.getNotepadId());
+        map.put(DatabaseConstants.Notes.Columns.CREATOR_ID, note.getCreatorId());
+        map.put(DatabaseConstants.Notes.Columns.TITLE, note.getTitle());
+        map.put(DatabaseConstants.Notes.Columns.TEXT, note.getText());
+        map.put(DatabaseConstants.Notes.Columns.CREATION_DATE, note.getCreationDate().getTime());
+        return map;
     }
 }

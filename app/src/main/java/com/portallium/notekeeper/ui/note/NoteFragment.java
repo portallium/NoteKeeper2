@@ -18,6 +18,7 @@ import com.portallium.notekeeper.ui.utilities.NotepadSpinnerHelper;
 public class NoteFragment extends Fragment {
 
     private static final String ARG_NOTE = "Note";
+    private static final String ARG_FIREBASE_ID = "firebaseId";
 
     private EditText mTitleText;
     private Spinner mNotepadSelector;
@@ -63,7 +64,7 @@ public class NoteFragment extends Fragment {
 
         mNotepadSelector = v.findViewById(R.id.note_notepad_picker);
         final NotepadSpinnerHelper notepadSpinnerHelper = new NotepadSpinnerHelper();
-        mNotepadSelector.setAdapter(notepadSpinnerHelper.createCursorAdapter(getActivity(), mNote.getCreatorId()));
+        mNotepadSelector.setAdapter(notepadSpinnerHelper.createCursorAdapter(getActivity(), mNote.getCreatorId(), getArguments().getString(ARG_FIREBASE_ID)));
         mNotepadSelector.setSelection(notepadSpinnerHelper.getSpinnerPositionByNotepadId(mNote.getNotepadId()));
         mNotepadSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -94,9 +95,10 @@ public class NoteFragment extends Fragment {
         updateNoteInDatabase();
     }
 
-    public static NoteFragment newInstance(Note note) {
+    public static NoteFragment newInstance(Note note, String firebaseId) {
         Bundle args = new Bundle();
         args.putSerializable(ARG_NOTE, note);
+        args.putString(ARG_FIREBASE_ID, firebaseId);
         NoteFragment fragment = new NoteFragment();
         fragment.setArguments(args);
         return fragment;
@@ -104,7 +106,7 @@ public class NoteFragment extends Fragment {
 
     private void updateNoteInDatabase() {
         //вносим изменения в БД
-        StorageKeeper.UpdateNoteTask updateNoteTask = StorageKeeper.getInstance(getActivity()).new UpdateNoteTask();
+        StorageKeeper.UpdateNoteTask updateNoteTask = StorageKeeper.getInstance(getActivity(), getArguments().getString(ARG_FIREBASE_ID)).new UpdateNoteTask();
         updateNoteTask.execute(mNote);
     }
 }

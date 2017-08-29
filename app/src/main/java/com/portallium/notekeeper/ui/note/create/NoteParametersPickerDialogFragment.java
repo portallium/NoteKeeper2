@@ -16,7 +16,6 @@ import android.widget.Toast;
 
 import com.portallium.notekeeper.R;
 import com.portallium.notekeeper.beans.Note;
-import com.portallium.notekeeper.database.FirebaseDatabaseHelper;
 import com.portallium.notekeeper.database.StorageKeeper;
 import com.portallium.notekeeper.ui.list.NotesListFragment;
 import com.portallium.notekeeper.ui.utilities.NotepadSpinnerHelper;
@@ -44,7 +43,7 @@ public class NoteParametersPickerDialogFragment extends DialogFragment {
 
         //Все это чудо по получению списка блокнотов из БД выносится в отдельный поток
         final NotepadSpinnerHelper notepadSpinnerHelper = new NotepadSpinnerHelper();
-        mNotepadPicker.setAdapter(notepadSpinnerHelper.createCursorAdapter(getActivity(), getArguments().getInt(ARG_USER_ID)));
+        mNotepadPicker.setAdapter(notepadSpinnerHelper.createCursorAdapter(getActivity(), getArguments().getInt(ARG_USER_ID), getArguments().getString(ARG_FIREBASE_ID)));
         int defaultNotepadId = getArguments().getInt(ARG_NOTEPAD_ID, -1);
         if (defaultNotepadId > 0) {
             mNotepadPicker.setSelection(notepadSpinnerHelper.getSpinnerPositionByNotepadId(defaultNotepadId));
@@ -67,7 +66,7 @@ public class NoteParametersPickerDialogFragment extends DialogFragment {
                         int notepadId = notepadSpinnerHelper.getNotepadIdBySpinnerPosition(mNotepadPicker.getSelectedItemPosition());
                         Note newNote = new Note (notepadId, getArguments().getInt(ARG_USER_ID), noteTitle, noteText);
                         //добавляем заметку в БД
-                        StorageKeeper.AddNoteToDatabaseTask addNoteTask = StorageKeeper.getInstance(getActivity()).new AddNoteToDatabaseTask();
+                        StorageKeeper.AddNoteToDatabaseTask addNoteTask = StorageKeeper.getInstance(getActivity(), getArguments().getString(ARG_FIREBASE_ID)).new AddNoteToDatabaseTask();
                         addNoteTask.execute(newNote);
                         try {
                             newNote.setId(addNoteTask.get());
@@ -75,9 +74,6 @@ public class NoteParametersPickerDialogFragment extends DialogFragment {
                         catch (ExecutionException | InterruptedException ex) {
                             Log.e("Adding note to DB", ex.getMessage(), ex);
                         }
-
-                        //добавляем заметку в firebase
-                        FirebaseDatabaseHelper.getInstance().addNoteToDatabase(getArguments().getString(ARG_FIREBASE_ID), newNote);
 
                         sendResult(Activity.RESULT_OK);
                     }

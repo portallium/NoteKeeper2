@@ -20,8 +20,8 @@ public class NotepadSpinnerHelper {
 
     private Cursor mNotepadsCursor;
 
-    public SimpleCursorAdapter createCursorAdapter(Context context, int userId) {
-        final StorageKeeper.GetUserNotepadsAsCursorTask task = StorageKeeper.getInstance(context).new GetUserNotepadsAsCursorTask();
+    public SimpleCursorAdapter createCursorAdapter(Context context, int userId, String firebaseUserId) {
+        final StorageKeeper.GetUserNotepadsAsCursorTask task = StorageKeeper.getInstance(context, firebaseUserId).new GetUserNotepadsAsCursorTask();
         task.execute(userId);
 
         try {

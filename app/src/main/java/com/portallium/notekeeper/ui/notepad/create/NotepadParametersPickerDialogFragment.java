@@ -15,7 +15,6 @@ import android.widget.Toast;
 
 import com.portallium.notekeeper.R;
 import com.portallium.notekeeper.beans.Notepad;
-import com.portallium.notekeeper.database.FirebaseDatabaseHelper;
 import com.portallium.notekeeper.database.StorageKeeper;
 import com.portallium.notekeeper.ui.list.NotesListFragment;
 
@@ -48,7 +47,7 @@ public class NotepadParametersPickerDialogFragment extends DialogFragment {
                             return; //чтобы не создавать блокнот с пустым названием
                         }
                         Notepad newNotepad = new Notepad(getArguments().getInt(ARG_USER_ID), noteTitle);
-                        StorageKeeper.AddNotepadToDatabaseTask addNotepadTask = StorageKeeper.getInstance(getContext()).new AddNotepadToDatabaseTask();
+                        StorageKeeper.AddNotepadToDatabaseTask addNotepadTask = StorageKeeper.getInstance(getContext(), getArguments().getString(ARG_FIREBASE_ID)).new AddNotepadToDatabaseTask();
                         try {
                             addNotepadTask.execute(newNotepad);
                             if (addNotepadTask.get() < 0) {
@@ -57,9 +56,6 @@ public class NotepadParametersPickerDialogFragment extends DialogFragment {
                             } else {
                                 sendResult(Activity.RESULT_OK);
                             }
-                            //можно сделать хитрее. Добавить сначала в firebase, потом onChildEventListener -
-                            //добавить в локальную БД и обновить UI.
-                            FirebaseDatabaseHelper.getInstance().addNotepadToDatabase(getArguments().getString(ARG_FIREBASE_ID), newNotepad);
                         }
                         catch (InterruptedException | ExecutionException ex) {
                             Log.e("Adding Notepad to DB", ex.getMessage(), ex);

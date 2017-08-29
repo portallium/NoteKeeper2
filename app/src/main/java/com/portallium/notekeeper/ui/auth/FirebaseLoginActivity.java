@@ -109,7 +109,7 @@ public class FirebaseLoginActivity extends AppCompatActivity {
     }
 
     private int returnUserIdByEmail(String email) {
-        StorageKeeper.GetUserIdByEmailTask task = StorageKeeper.getInstance(this).new GetUserIdByEmailTask();
+        StorageKeeper.GetUserIdByEmailTask task = StorageKeeper.getInstance(this, mAuth.getCurrentUser().getUid()).new GetUserIdByEmailTask();
         task.execute(email);
         try {
             return task.get();

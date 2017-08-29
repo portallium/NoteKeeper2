@@ -11,9 +11,17 @@ public class Notepad implements Serializable {
     private Date mCreationDate;
     private int mId;
 
+    private String mFirebaseId;
+
+    public Notepad(int creatorId, String title, Date creationDate, int id, String firebaseId) {
+        this(creatorId, title, creationDate, id);
+        mFirebaseId = firebaseId;
+    }
+
     public Notepad(int creatorId, String title, Date creationDate, int id) {
         this(creatorId, title, id);
         mCreationDate = creationDate;
+        //firebaseId инициализируется как null. Это правильно. Это так и надо.
     }
 
     public Notepad(int creatorId, String title, int id) {
@@ -57,4 +65,33 @@ public class Notepad implements Serializable {
         this.mId = id;
     }
 
+    public String getFirebaseId() {
+        return mFirebaseId;
+    }
+
+    public void setFirebaseId(String firebaseId) {
+        this.mFirebaseId = firebaseId;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Notepad notepad = (Notepad) o;
+
+        return (mTitle.equals(notepad.mTitle)
+                && mId == notepad.mId
+                && mCreatorId == notepad.mCreatorId
+                && mCreationDate.equals(notepad.mCreationDate));
+    }
+
+    @Override
+    public int hashCode() {
+        int result = mCreatorId;
+        result = 31 * result + (mTitle != null ? mTitle.hashCode() : 0);
+        result = 31 * result + (mCreationDate != null ? mCreationDate.hashCode() : 0);
+        result = 31 * result + mId;
+        return result;
+    }
 }

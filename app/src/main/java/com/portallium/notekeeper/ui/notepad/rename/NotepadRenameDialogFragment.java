@@ -24,15 +24,16 @@ import java.util.concurrent.ExecutionException;
 public class NotepadRenameDialogFragment extends DialogFragment {
 
     public static final String ARG_NOTEPAD = "notepadName";
+    private static final String ARG_FIREBASE_ID = "firebaseId";
 
     private EditText mNotepadTitle;
 
     private Notepad mNotepad;
 
-    public static NotepadRenameDialogFragment newInstance(Notepad notepad) {
-
+    public static NotepadRenameDialogFragment newInstance(Notepad notepad, String firebaseId) {
         Bundle args = new Bundle();
         args.putSerializable(ARG_NOTEPAD, notepad);
+        args.putString(ARG_FIREBASE_ID, firebaseId);
         NotepadRenameDialogFragment fragment = new NotepadRenameDialogFragment();
         fragment.setArguments(args);
         return fragment;
@@ -63,7 +64,7 @@ public class NotepadRenameDialogFragment extends DialogFragment {
                         }
 
                         //проверить, нет ли уже блокнота с таким названием.
-                        StorageKeeper.GetUserNotepadsAsListTask getUserNotepadsAsListTask = StorageKeeper.getInstance(getActivity()).new GetUserNotepadsAsListTask();
+                        StorageKeeper.GetUserNotepadsAsListTask getUserNotepadsAsListTask = StorageKeeper.getInstance(getActivity(), getArguments().getString(ARG_FIREBASE_ID)).new GetUserNotepadsAsListTask();
                         getUserNotepadsAsListTask.execute(mNotepad.getCreatorId());
                         try {
                             List<Notepad> notepads = getUserNotepadsAsListTask.get();
@@ -81,7 +82,7 @@ public class NotepadRenameDialogFragment extends DialogFragment {
                         }
 
                         mNotepad.setTitle(noteTitle);
-                        StorageKeeper.UpdateNotepadTask updateNotepadTask = StorageKeeper.getInstance(getActivity()).new UpdateNotepadTask();
+                        StorageKeeper.UpdateNotepadTask updateNotepadTask = StorageKeeper.getInstance(getActivity(), getArguments().getString(ARG_FIREBASE_ID)).new UpdateNotepadTask();
                         updateNotepadTask.execute(mNotepad);
                         sendResult(Activity.RESULT_OK);
                     }

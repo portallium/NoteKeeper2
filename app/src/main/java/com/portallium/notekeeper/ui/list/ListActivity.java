@@ -16,7 +16,7 @@ public class ListActivity extends SingleFragmentActivity {
 
     @Override
     protected Fragment createFragment() {
-        return NotepadsListFragment.newInstance(getIntent().getIntExtra(EXTRA_USER_ID, 0));
+        return NotepadsListFragment.newInstance(getIntent().getIntExtra(EXTRA_USER_ID, 0), getIntent().getStringExtra(EXTRA_FIREBASE_ID));
     }
 
     public static Intent getIntent(Context context, int userId, String firebaseId) {
