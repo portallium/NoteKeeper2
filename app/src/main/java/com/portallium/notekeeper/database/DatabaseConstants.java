@@ -32,6 +32,7 @@ public final class DatabaseConstants {
             public static final String TITLE = "title";
             public static final String CREATION_DATE = "creation_date";
             public static final String FIREBASE_ID = "firebase_id";
+            public static final String FIREBASE_STATUS = "firebase_status";
         }
     }
 
@@ -49,6 +50,14 @@ public final class DatabaseConstants {
             public static final String CREATION_DATE = "creation_date";
             public static final String TEXT = "text";
             public static final String FIREBASE_ID = "firebase_id";
+            public static final String FIREBASE_STATUS = "firebase_status";
         }
+    }
+
+    public static final class FirebaseCodes {
+        public static final int SYNCHRONIZED = 1;
+        public static final int NEEDS_ADDITION = 0;
+        public static final int NEEDS_UPDATE = -1;
+        public static final int NEEDS_DELETION = -2;
     }
 }

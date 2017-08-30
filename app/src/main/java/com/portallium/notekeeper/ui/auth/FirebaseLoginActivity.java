@@ -2,9 +2,9 @@ package com.portallium.notekeeper.ui.auth;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -16,9 +16,10 @@ import com.portallium.notekeeper.R;
 import com.portallium.notekeeper.database.StorageKeeper;
 import com.portallium.notekeeper.ui.list.ListActivity;
 
-import io.fabric.sdk.android.Fabric;
 import java.util.Collections;
 import java.util.concurrent.ExecutionException;
+
+import io.fabric.sdk.android.Fabric;
 
 /**
  * Класс, внутри которого происходит взаимодействие со всей системой аутентификации, предоставляемой firebase.
@@ -125,6 +126,7 @@ public class FirebaseLoginActivity extends AppCompatActivity {
         logUser(user); //Crashlytics assistance
         int currentUserId = returnUserIdByEmail(user.getEmail());
         Log.d("User is signed in", "his/her id = " + currentUserId);
+        //todo: вот тут, по идее, должен запускаться метод синхронизации!
         startActivity(ListActivity.getIntent(FirebaseLoginActivity.this, currentUserId, user.getUid()));
         finish();
     }

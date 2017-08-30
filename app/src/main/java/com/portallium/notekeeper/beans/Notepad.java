@@ -12,10 +12,12 @@ public class Notepad implements Serializable {
     private int mId;
 
     private String mFirebaseId;
+    private int mFirebaseStatus;
 
-    public Notepad(int creatorId, String title, Date creationDate, int id, String firebaseId) {
+    public Notepad(int creatorId, String title, Date creationDate, int id, String firebaseId, int firebaseStatus) {
         this(creatorId, title, creationDate, id);
         mFirebaseId = firebaseId;
+        mFirebaseStatus = firebaseStatus;
     }
 
     /**
@@ -90,6 +92,14 @@ public class Notepad implements Serializable {
         this.mFirebaseId = firebaseId;
     }
 
+    public int getFirebaseStatus() {
+        return mFirebaseStatus;
+    }
+
+    public void setFirebaseStatus(int firebaseStatus) {
+        this.mFirebaseStatus = firebaseStatus;
+    }
+
     /**
      * Метод, проверяющий идентичность двух блокнотов.
      * Два блокнота идентичны, если все их поля, кроме mFirebaseId, равны между собой.
@@ -109,6 +119,7 @@ public class Notepad implements Serializable {
                 && mCreatorId == notepad.mCreatorId
                 && mCreationDate.equals(notepad.mCreationDate));
     }
+    //TODO: а этот метод ТОЧНО то, что мне нужно? Потому что я в сомнениях.
 
     /**
      * Метод подсчитывает хэш-код блокнота.
@@ -121,5 +132,10 @@ public class Notepad implements Serializable {
         result = 31 * result + (mCreationDate != null ? mCreationDate.hashCode() : 0);
         result = 31 * result + mId;
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "Notepad \"" + mTitle + "\"";
     }
 }

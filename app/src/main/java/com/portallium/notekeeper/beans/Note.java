@@ -13,12 +13,14 @@ public class Note implements Serializable {
     private String mText;
 
     private String mFirebaseId;
+    private int mFirebaseStatus;
 
     private Note() {} //этот конструктор нужен firebase. В коде непосредственно не используется.
 
-    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseId) {
+    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseId, int firebaseStatus) {
         this(id, notepadId, creatorId, title, creationDate, text);
         this.mFirebaseId = firebaseId;
+        this.mFirebaseStatus = firebaseStatus;
     }
 
     /**
@@ -100,6 +102,14 @@ public class Note implements Serializable {
         this.mFirebaseId = firebaseId;
     }
 
+    public int getFirebaseStatus() {
+        return mFirebaseStatus;
+    }
+
+    public void setFirebaseStatus(int firebaseStatus) {
+        this.mFirebaseStatus = firebaseStatus;
+    }
+
     /**
      * Метод, проверяющий идентичность двух заметок.
      * Заметки считаются идентичными, если их параметры (id, notepadId, creatorId, Text, Title, CreationDate)
@@ -138,5 +148,10 @@ public class Note implements Serializable {
                 mText.hashCode() +
                 mTitle.hashCode() +
                 mCreationDate.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return "Note \"" + mTitle + "\"";
     }
 }

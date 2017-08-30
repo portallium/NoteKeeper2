@@ -7,7 +7,7 @@ import android.util.Log;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
 
-    private static final int VERSION = 2; //
+    private static final int VERSION = 3; //
     private static final String DATABASE_NAME = "noteKeeperDatabase.db";
 
     public DatabaseHelper(Context context) {
@@ -35,7 +35,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         DatabaseConstants.Notepads.Columns.CREATOR_ID + " INTEGER, " +
                         DatabaseConstants.Notepads.Columns.TITLE + ", " +
                         DatabaseConstants.Notepads.Columns.CREATION_DATE + ", " +
-                        DatabaseConstants.Notepads.Columns.FIREBASE_ID + " TEXT DEFAULT NULL, FOREIGN KEY (" +
+                        DatabaseConstants.Notepads.Columns.FIREBASE_ID + " TEXT DEFAULT NULL, " +
+                        DatabaseConstants.Notepads.Columns.FIREBASE_STATUS + " INTEGER DEFAULT " +
+                        DatabaseConstants.FirebaseCodes.NEEDS_ADDITION + ", FOREIGN KEY (" +
                         DatabaseConstants.Notepads.Columns.CREATOR_ID + ") REFERENCES " +
                         DatabaseConstants.Users.TABLE_NAME + " (" + DatabaseConstants.Users.Columns.ID + "));");
 
@@ -46,7 +48,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                         DatabaseConstants.Notes.Columns.TITLE + ", " +
                         DatabaseConstants.Notes.Columns.CREATION_DATE + ", " +
                         DatabaseConstants.Notes.Columns.TEXT + ", " +
-                        DatabaseConstants.Notes.Columns.FIREBASE_ID + " TEXT DEFAULT NULL, FOREIGN KEY (" +
+                        DatabaseConstants.Notes.Columns.FIREBASE_ID + " TEXT DEFAULT NULL, " +
+                        DatabaseConstants.Notes.Columns.FIREBASE_STATUS + " INTEGER DEFAULT " +
+                        DatabaseConstants.FirebaseCodes.NEEDS_ADDITION + ", FOREIGN KEY (" +
                         DatabaseConstants.Notes.Columns.NOTEPAD_ID + ") REFERENCES " +
                         DatabaseConstants.Notepads.TABLE_NAME + " (" + DatabaseConstants.Notepads.Columns.NOTEPAD_ID + "), " +
                         "FOREIGN KEY (" + DatabaseConstants.Notes.Columns.CREATOR_ID + ") REFERENCES " +
@@ -67,6 +71,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 sqLiteDatabase.execSQL("ALTER TABLE " + DatabaseConstants.Notes.TABLE_NAME + " ADD COLUMN " +
                         DatabaseConstants.Notes.Columns.FIREBASE_ID + " TEXT DEFAULT NULL");
                 Log.d("Updating DB schema", "from v.1 to v.2");
+                //break'a тут теперь нет, чтобы обновление продолжилось до актуальной версии.
+            }
+            case 2: {
+                sqLiteDatabase.execSQL("ALTER TABLE " + DatabaseConstants.Notepads.TABLE_NAME + " ADD COLUMN " +
+                        DatabaseConstants.Notepads.Columns.FIREBASE_STATUS + " INTEGER DEFAULT " +
+                        DatabaseConstants.FirebaseCodes.NEEDS_ADDITION);
+                sqLiteDatabase.execSQL("ALTER TABLE " + DatabaseConstants.Notes.TABLE_NAME + " ADD COLUMN " +
+                        DatabaseConstants.Notes.Columns.FIREBASE_STATUS + " INTEGER DEFAULT " +
+                        DatabaseConstants.FirebaseCodes.NEEDS_ADDITION);
+                //todo: и вот тут! вызывается метод synchronize.
+                Log.d("Updating DB schema", "from v.2 to v.3");
                 break;
             }
             default: {
