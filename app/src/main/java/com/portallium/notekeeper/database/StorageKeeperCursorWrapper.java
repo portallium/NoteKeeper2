@@ -25,7 +25,7 @@ public class StorageKeeperCursorWrapper extends CursorWrapper {
         int creatorId = getInt(getColumnIndex(DatabaseConstants.Notepads.Columns.CREATOR_ID));
         String firebaseId = getString(getColumnIndex(DatabaseConstants.Notepads.Columns.FIREBASE_ID));
 
-        if (firebaseId != null) {
+        if (firebaseId != null) { //значит, блокнот уже добавлен в Firebase
             int firebaseStatus = getInt(getColumnIndex(DatabaseConstants.Notepads.Columns.FIREBASE_STATUS));
             return new Notepad(creatorId, title, creationDate, id, firebaseId, firebaseStatus);
         }
@@ -44,11 +44,12 @@ public class StorageKeeperCursorWrapper extends CursorWrapper {
         String text = getString(getColumnIndex(DatabaseConstants.Notes.Columns.TEXT));
         Date creationDate = new Date(getLong(getColumnIndex(DatabaseConstants.Notes.Columns.CREATION_DATE)));
         String firebaseId = getString(getColumnIndex(DatabaseConstants.Notepads.Columns.FIREBASE_ID));
-        if (firebaseId != null) {
+        String firebaseNotepadId = getString(getColumnIndex(DatabaseConstants.Notes.Columns.FIREBASE_NOTEPAD_ID));
+        if (firebaseId != null) { //значит, заметка уже добавлена в firebase
             int firebaseStatus = getInt(getColumnIndex(DatabaseConstants.Notes.Columns.FIREBASE_STATUS));
-            return new Note(id, notepadId, creatorId, title, creationDate, text, firebaseId, firebaseStatus);
+            return new Note(id, notepadId, creatorId, title, creationDate, text, firebaseId, firebaseStatus, firebaseNotepadId);
         }
-        return new Note (id, notepadId, creatorId, title, creationDate, text);
+        return new Note (id, notepadId, creatorId, title, creationDate, text, firebaseNotepadId);
         //если у заметки нет firebaseId, то ее статус - точно дефолтный: needs_addition
     }
 }

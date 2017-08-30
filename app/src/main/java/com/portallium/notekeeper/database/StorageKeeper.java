@@ -21,7 +21,6 @@ import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -117,7 +116,7 @@ public class StorageKeeper {
                 return getUserIdByEmail(email[0]);
             }
             catch (DuplicateUsersException ex) {
-                Log.e("Adding user to DB", ex.getMessage(), ex);
+                Log.e("Getting user ID", ex.getMessage(), ex);
                 return -1;
             }
         }
@@ -169,10 +168,7 @@ public class StorageKeeper {
             }
         }
 
-        ContentValues values = new ContentValues();
-        values.put(DatabaseConstants.Notepads.Columns.CREATOR_ID, notepad.getCreatorId());
-        values.put(DatabaseConstants.Notepads.Columns.TITLE, notepad.getTitle());
-        values.put(DatabaseConstants.Notepads.Columns.CREATION_DATE, new Date().getTime());
+        ContentValues values = parseNotepadToContentValues(notepad);
         mDatabase.insert(DatabaseConstants.Notepads.TABLE_NAME, null, values);
 
         //Ищем только что созданный блокнот в БД и возвращаем его id
@@ -187,10 +183,11 @@ public class StorageKeeper {
             int newNotepadId = newNotepadCursor.getInt(newNotepadCursor.getColumnIndex(DatabaseConstants.Notepads.Columns.NOTEPAD_ID));
             notepad.setId(newNotepadId);
 
-            //добавляем блокнот в firebase. Изменять статус не нужно: он и так needs_addition.
+            //добавляем блокнот в firebase, если его там до сих пор нет. Изменять статус не нужно: он и так needs_addition.
             //важно понимать, что, даже если нет интернета, выполнение завершается. firebase сильно умнее, чем я думал.
-            //todo: иногда нам НЕ надо добавлять блокнот в БД (например, если я только что его получил).
-            addNotepadToFirebase(mCurrentUserFirebaseId, notepad);
+            if (notepad.getFirebaseId() == null) {
+                addNotepadToFirebase(mCurrentUserFirebaseId, notepad);
+            }
 
             return newNotepadId;
         }
@@ -214,14 +211,10 @@ public class StorageKeeper {
      * @return id созданной заметки.
      */
     private int addNoteToDatabase(Note note) {
-        //Надо ли проверять наличие в данном блокноте заметки с данным названием? Я бы сказал, что нет.
-        //Наверное, это не так важно.
-        ContentValues values = new ContentValues();
-        values.put(DatabaseConstants.Notes.Columns.NOTEPAD_ID, note.getNotepadId());
-        values.put(DatabaseConstants.Notes.Columns.CREATOR_ID, note.getCreatorId());
-        values.put(DatabaseConstants.Notes.Columns.TITLE, note.getTitle());
-        values.put(DatabaseConstants.Notes.Columns.CREATION_DATE, note.getCreationDate().getTime());
-        values.put(DatabaseConstants.Notes.Columns.TEXT, note.getText());
+        note.setFirebaseNotepadId(getFirebaseNotepadKeyByCursor(getCursorByNotepadId(note.getNotepadId()))); //может быть null!
+        //ТАК! а если я сначала создаю блокнот, потом добавляю в него заметку, а потом включаю интернет? Если запросы выполнятся в обратном порядке, то все упадет! (С другой стороны, в Гугл наверняка об этом тоже подумали)
+
+        ContentValues values = parseNoteToContentValues(note);
         mDatabase.insert(DatabaseConstants.Notes.TABLE_NAME, null, values);
 
         try (Cursor newNoteCursor = mDatabase.query(
@@ -238,8 +231,12 @@ public class StorageKeeper {
             int newNoteId = newNoteCursor.getInt(newNoteCursor.getColumnIndex(DatabaseConstants.Notes.Columns.NOTE_ID));
             note.setId(newNoteId); //Как только заметка добавляется в БД, она получает id.
 
-            //добавляем заметку в firebase. Изменять статус не нужно: он и так needs_addition.
-            addNoteToFirebase(mCurrentUserFirebaseId, note);
+
+
+            //добавляем заметку в firebase, если ее там до сих пор нет. Изменять статус не нужно: он и так needs_addition.
+            if (note.getFirebaseId() == null) {
+                addNoteToFirebase(mCurrentUserFirebaseId, note);
+            }
 
             return newNoteId;
         }
@@ -456,7 +453,7 @@ public class StorageKeeper {
                 DatabaseConstants.Notes.Columns.NOTE_ID + " = ? ",
                 new String[]{Integer.toString(noteId)}
         );
-        //fixme: так, стоп. как firebase о ней узнает, если из sqlite эта запись удалена? по-хорошему, здесь нужна новая таблица для удаляемых заметок, из которой заметки будут удаляться после того, как будут удалены из firebase...
+        //todo: так, стоп. как firebase о ней узнает, если из sqlite эта запись удалена? по-хорошему, здесь нужна новая таблица для удаляемых заметок, из которой заметки будут удаляться после того, как будут удалены из firebase...
 
         //удалить из firebase
         if (firebaseNoteKey != null) {
@@ -534,7 +531,9 @@ public class StorageKeeper {
 
     private ContentValues parseNoteToContentValues(Note note) {
         ContentValues values = new ContentValues();
-        values.put(DatabaseConstants.Notes.Columns.NOTE_ID, note.getId());
+        if (note.getId() != Note.ID_NOT_YET_ASSIGNED) {
+            values.put(DatabaseConstants.Notes.Columns.NOTE_ID, note.getId());
+        }
         values.put(DatabaseConstants.Notes.Columns.NOTEPAD_ID, note.getNotepadId());
         values.put(DatabaseConstants.Notes.Columns.CREATOR_ID, note.getCreatorId());
         values.put(DatabaseConstants.Notes.Columns.TITLE, note.getTitle());
@@ -544,6 +543,9 @@ public class StorageKeeper {
             values.put(DatabaseConstants.Notes.Columns.FIREBASE_ID, note.getFirebaseId());
             values.put(DatabaseConstants.Notes.Columns.FIREBASE_STATUS, note.getFirebaseStatus());
         }
+        if (note.getFirebaseNotepadId() != null) {
+            values.put(DatabaseConstants.Notes.Columns.FIREBASE_NOTEPAD_ID, note.getFirebaseNotepadId());
+        }
         //иначе там останется NULL, верно?
         //todo: обновить эти методы в связи с добавлением новой колонки (а также конструкторы и курсор-враппер)
         return values;
@@ -551,7 +553,9 @@ public class StorageKeeper {
 
     private ContentValues parseNotepadToContentValues(Notepad notepad) {
         ContentValues values = new ContentValues();
-        values.put(DatabaseConstants.Notepads.Columns.NOTEPAD_ID, notepad.getId());
+        if (notepad.getId() != Notepad.ID_NOT_YET_ASSIGNED) {
+            values.put(DatabaseConstants.Notepads.Columns.NOTEPAD_ID, notepad.getId());
+        }
         values.put(DatabaseConstants.Notepads.Columns.CREATOR_ID, notepad.getCreatorId());
         values.put(DatabaseConstants.Notepads.Columns.TITLE, notepad.getTitle());
         values.put(DatabaseConstants.Notepads.Columns.CREATION_DATE, notepad.getCreationDate().getTime());
@@ -586,8 +590,9 @@ public class StorageKeeper {
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
                 Log.d("New notepad added", "key = " + databaseReference.getKey());
                 notepad.setFirebaseId(databaseReference.getKey());
-                updateNotepad(notepad);
+                updateNotepad(notepad); //fixme зачем этот вызов?! заменить на обычное обновление firebaseId.
                 changeNotepadFirebaseStatus(notepad.getId(), DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
+                notepad.setFirebaseStatus(DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
             }
         });
     }
@@ -613,8 +618,9 @@ public class StorageKeeper {
                 Log.d("New note added", "key = " + databaseReference.getKey());
                 //я надеюсь, референс указывает на добавленный объект
                 note.setFirebaseId(databaseReference.getKey());
-                updateNote(note);
+                updateNote(note); //fixme зачем этот вызов?! заменить на обычное обновление firebaseId.
                 changeNoteFirebaseStatus(note.getId(), DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
+                note.setFirebaseStatus(DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
             }
         });
     }
@@ -634,6 +640,7 @@ public class StorageKeeper {
             public void onSuccess(Void aVoid) {
                 Log.d("Firebase update: done", note + " updated in firebase.");
                 changeNoteFirebaseStatus(note.getId(), DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
+                note.setFirebaseStatus(DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
             }
         });
     }
@@ -644,15 +651,16 @@ public class StorageKeeper {
             public void onSuccess(Void aVoid) {
                 Log.d("Firebase update: done", notepad + " updated in firebase.");
                 changeNotepadFirebaseStatus(notepad.getId(), DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
+                notepad.setFirebaseStatus(DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
             }
         });
     }
 
-    //todo: джедай, помни: id не парсить, firebase-штуки тоже!
+    /**
+     * Этот метод используется для последующей вставки блокнота в Firebase-БД. И больше ни для чего.
+     */
     private Map<String, Object> parseNotepadToMap(Notepad notepad) {
         Map<String, Object> map = new HashMap<>();
-        map.put(DatabaseConstants.Notepads.Columns.NOTEPAD_ID, notepad.getId());
-        map.put(DatabaseConstants.Notepads.Columns.CREATOR_ID, notepad.getCreatorId());
         map.put(DatabaseConstants.Notepads.Columns.TITLE, notepad.getTitle());
         map.put(DatabaseConstants.Notepads.Columns.CREATION_DATE, notepad.getCreationDate().getTime());
         return map;
@@ -660,12 +668,10 @@ public class StorageKeeper {
 
     private Map<String, Object> parseNoteToMap(Note note) {
         Map<String, Object> map = new HashMap<>();
-        map.put(DatabaseConstants.Notes.Columns.NOTE_ID, note.getId());
-        map.put(DatabaseConstants.Notes.Columns.NOTEPAD_ID, note.getNotepadId());
-        map.put(DatabaseConstants.Notes.Columns.CREATOR_ID, note.getCreatorId());
         map.put(DatabaseConstants.Notes.Columns.TITLE, note.getTitle());
         map.put(DatabaseConstants.Notes.Columns.TEXT, note.getText());
         map.put(DatabaseConstants.Notes.Columns.CREATION_DATE, note.getCreationDate().getTime());
+        map.put(DatabaseConstants.Notes.Columns.FIREBASE_NOTEPAD_ID, note.getFirebaseNotepadId());
         return map;
     }
 }

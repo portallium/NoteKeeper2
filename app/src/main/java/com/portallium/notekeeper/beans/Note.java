@@ -5,6 +5,8 @@ import java.util.Date;
 
 public class Note implements Serializable {
 
+    public static final int ID_NOT_YET_ASSIGNED = -1;
+
     private int mId;
     private int mNotepadId;
     private int mCreatorId;
@@ -14,11 +16,12 @@ public class Note implements Serializable {
 
     private String mFirebaseId;
     private int mFirebaseStatus;
+    private String mFirebaseNotepadId;
 
     private Note() {} //этот конструктор нужен firebase. В коде непосредственно не используется.
 
-    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseId, int firebaseStatus) {
-        this(id, notepadId, creatorId, title, creationDate, text);
+    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseId, int firebaseStatus, String firebaseNotepadId) {
+        this(id, notepadId, creatorId, title, creationDate, text, firebaseNotepadId);
         this.mFirebaseId = firebaseId;
         this.mFirebaseStatus = firebaseStatus;
     }
@@ -32,10 +35,11 @@ public class Note implements Serializable {
      * @param creationDate unix-время создания заметки (в миллисекундах)
      * @param text текст заметки
      */
-    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text) {
+    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseNotepadId) {
         this(notepadId, creatorId, title, text);
         this.mId = id;
         this.mCreationDate = creationDate;
+        this.mFirebaseNotepadId = firebaseNotepadId;
     }
 
     /**
@@ -46,12 +50,24 @@ public class Note implements Serializable {
      * @param text текст заметки
      */
     public Note(int notepadId, int creatorId, String title, String text) {
-        this.mId = -1;
+        this.mId = ID_NOT_YET_ASSIGNED;
         this.mNotepadId = notepadId;
         this.mCreatorId = creatorId;
         this.mTitle = title;
         this.mCreationDate = new Date();
         this.mText = text;
+    }
+
+    /**
+     * Конструктор, который используется при парсинге существующей заметки из Firebase.
+     * @param title название заметки
+     * @param text текст заметки
+     * @param firebaseNotepadId firebase id блокнота, в котором находится заметка
+     */
+    public Note(String title, String text, String firebaseNotepadId) {
+        mTitle = title;
+        mText = text;
+        mFirebaseNotepadId = firebaseNotepadId;
     }
 
     public int getId() {
@@ -108,6 +124,14 @@ public class Note implements Serializable {
 
     public void setFirebaseStatus(int firebaseStatus) {
         this.mFirebaseStatus = firebaseStatus;
+    }
+
+    public String getFirebaseNotepadId() {
+        return mFirebaseNotepadId;
+    }
+
+    public void setFirebaseNotepadId(String firebaseNotepadId) {
+        this.mFirebaseNotepadId = firebaseNotepadId;
     }
 
     /**

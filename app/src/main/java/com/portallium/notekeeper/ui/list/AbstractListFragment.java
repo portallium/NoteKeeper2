@@ -49,6 +49,7 @@ abstract class AbstractListFragment<T> extends Fragment {
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.menu_notepads_list, menu);
+        //todo: set subtitle: email
     }
 
     @Nullable

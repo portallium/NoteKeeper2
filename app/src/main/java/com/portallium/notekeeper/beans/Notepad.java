@@ -6,6 +6,8 @@ import java.util.Date;
 
 public class Notepad implements Serializable {
 
+    public static final int ID_NOT_YET_ASSIGNED = -1;
+
     private int mCreatorId;
     private String mTitle;
     private Date mCreationDate;
@@ -55,7 +57,7 @@ public class Notepad implements Serializable {
         mCreatorId = creatorId;
         mTitle = title;
         mCreationDate = new Date();
-        mId = -1;
+        mId = ID_NOT_YET_ASSIGNED;
     }
 
     private Notepad() {} //этот конструктор нужен Firebase.
