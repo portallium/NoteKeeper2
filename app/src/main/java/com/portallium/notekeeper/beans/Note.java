@@ -20,8 +20,8 @@ public class Note implements Serializable {
 
     private Note() {} //этот конструктор нужен firebase. В коде непосредственно не используется.
 
-    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseId, int firebaseStatus, String firebaseNotepadId) {
-        this(id, notepadId, creatorId, title, creationDate, text, firebaseNotepadId);
+    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseId, int firebaseStatus) {
+        this(id, notepadId, creatorId, title, creationDate, text);
         this.mFirebaseId = firebaseId;
         this.mFirebaseStatus = firebaseStatus;
     }
@@ -35,11 +35,10 @@ public class Note implements Serializable {
      * @param creationDate unix-время создания заметки (в миллисекундах)
      * @param text текст заметки
      */
-    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseNotepadId) {
+    public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text) {
         this(notepadId, creatorId, title, text);
         this.mId = id;
         this.mCreationDate = creationDate;
-        this.mFirebaseNotepadId = firebaseNotepadId;
     }
 
     /**

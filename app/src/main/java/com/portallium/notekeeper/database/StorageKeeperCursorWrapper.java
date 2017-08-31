@@ -44,12 +44,11 @@ public class StorageKeeperCursorWrapper extends CursorWrapper {
         String text = getString(getColumnIndex(DatabaseConstants.Notes.Columns.TEXT));
         Date creationDate = new Date(getLong(getColumnIndex(DatabaseConstants.Notes.Columns.CREATION_DATE)));
         String firebaseId = getString(getColumnIndex(DatabaseConstants.Notepads.Columns.FIREBASE_ID));
-        String firebaseNotepadId = getString(getColumnIndex(DatabaseConstants.Notes.Columns.FIREBASE_NOTEPAD_ID));
         if (firebaseId != null) { //значит, заметка уже добавлена в firebase
             int firebaseStatus = getInt(getColumnIndex(DatabaseConstants.Notes.Columns.FIREBASE_STATUS));
-            return new Note(id, notepadId, creatorId, title, creationDate, text, firebaseId, firebaseStatus, firebaseNotepadId);
+            return new Note(id, notepadId, creatorId, title, creationDate, text, firebaseId, firebaseStatus);
         }
-        return new Note (id, notepadId, creatorId, title, creationDate, text, firebaseNotepadId);
+        return new Note (id, notepadId, creatorId, title, creationDate, text);
         //если у заметки нет firebaseId, то ее статус - точно дефолтный: needs_addition
     }
 }

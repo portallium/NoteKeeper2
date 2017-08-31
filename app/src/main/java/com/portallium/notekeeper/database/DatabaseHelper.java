@@ -95,3 +95,5 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 }
+
+//todo: удалить колонку FIREBASE_NOTEPAD_ID, это была очень плохая идея.

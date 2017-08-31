@@ -52,6 +52,7 @@ public final class DatabaseConstants {
             public static final String FIREBASE_ID = "firebase_id";
             public static final String FIREBASE_STATUS = "firebase_status";
             public static final String FIREBASE_NOTEPAD_ID = "firebase_notepad_id";
+            //`в этой колонке данных не будет больше никогда. проследить за этим.
         }
     }
 
