@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 /**
  * Синглтон, сквозь который проходят все запросы всех фрагментов как к базе данных SQLite, так и к Firebase.
@@ -37,6 +38,12 @@ public class StorageKeeper {
     private static final String FIREBASE_NOTEPAD_ID = "firebase_notepad_id";
 
     private static StorageKeeper instance;
+
+    /**
+     * Все запросы к firebase должны выполняться в порядке очереди, чтобы к моменту старта запроса мы имели результаты всех предыдущих.
+     * Это важно, потому что при добавлении заметки в блокнот мы УЖЕ должны знать firebaseId вновь добавленного блокнота.
+     */
+    private static final Semaphore FIREBASE_SEMAPHORE = new Semaphore(1, true);
 
     private SQLiteDatabase mDatabase;
 
@@ -179,7 +186,7 @@ public class StorageKeeper {
      * Если нет, добавляет в БД новый.
      * @return id созданного блокнота
      */
-    private int addNotepadToDatabase(Notepad notepad) {
+    private int addNotepadToDatabase(final Notepad notepad) {
         //проверяем наличие в SQLite блокнота с данным названием: его быть не должно
         try (Cursor notepadsWithIdenticalNameCursor = mDatabase.query(
                 DatabaseConstants.Notepads.TABLE_NAME,
@@ -209,9 +216,15 @@ public class StorageKeeper {
             notepad.setId(newNotepadId);
 
             //добавляем блокнот в firebase, если его там до сих пор нет (он там есть, когда мы его получаем в методе синхронизации). Изменять статус не нужно: он и так needs_addition.
-            //важно понимать, что, даже если нет интернета, выполнение завершается. firebase сильно умнее, чем я думал.
+            //todo: все (все!) методы взаимодействия с firebase должны выполняться в отдельных потоках!
             if (notepad.getFirebaseId() == null) {
-                addNotepadToFirebase(mCurrentUserFirebaseId, notepad);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        addNotepadToFirebase(mCurrentUserFirebaseId, notepad);
+                    }
+                }).start();
+                //оно работает! а AsyncTask почему-то нет. Хмммммм....
             }
 
             return newNotepadId;
@@ -235,7 +248,7 @@ public class StorageKeeper {
      *
      * @return id созданной заметки.
      */
-    private int addNoteToDatabase(Note note) {
+    private int addNoteToDatabase(final Note note) {
         ContentValues values = parseNoteToContentValues(note);
         mDatabase.insert(DatabaseConstants.Notes.TABLE_NAME, null, values);
 
@@ -256,7 +269,12 @@ public class StorageKeeper {
             //добавляем заметку в firebase, если ее там до сих пор нет. (Она там есть, если мы ее получили из firebase, из метода синхронизации.)
             //Изменять статус не нужно: он и так needs_addition.
             if (note.getFirebaseId() == null) {
-                addNoteToFirebase(mCurrentUserFirebaseId, note);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        addNoteToFirebase(mCurrentUserFirebaseId, note);
+                    }
+                }).start();
             }
 
             return newNoteId;
@@ -403,7 +421,7 @@ public class StorageKeeper {
         }
     }
 
-    private void updateNote(Note note) {
+    private void updateNote(final Note note) {
         mDatabase.update(
                 DatabaseConstants.Notes.TABLE_NAME,
                 parseNoteToContentValues(note),
@@ -413,7 +431,12 @@ public class StorageKeeper {
 
         //дать знать, что требуется обновление в firebase, и внести это обновление
         changeNoteFirebaseStatus(note, DatabaseConstants.FirebaseCodes.NEEDS_UPDATE);
-        updateNoteInFirebase(mCurrentUserFirebaseId, note);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                updateNoteInFirebase(mCurrentUserFirebaseId, note);
+            }
+        }).start();
     }
 
     /**
@@ -430,7 +453,7 @@ public class StorageKeeper {
         }
     }
 
-    private void updateNotepad(Notepad notepad) {
+    private void updateNotepad(final Notepad notepad) {
         //внести обновление данных о блокноте(название, там менять больше нечего) в локальную бд
         mDatabase.update(
                 DatabaseConstants.Notepads.TABLE_NAME,
@@ -441,7 +464,12 @@ public class StorageKeeper {
 
         //дать знать, что требуется обновление в firebase, и внести это обновление
         changeNotepadFirebaseStatus(notepad, DatabaseConstants.FirebaseCodes.NEEDS_UPDATE);
-        updateNotepadInFirebase(mCurrentUserFirebaseId, notepad);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                updateNotepadInFirebase(mCurrentUserFirebaseId, notepad);
+            }
+        }).start();
     }
 
 
@@ -449,31 +477,34 @@ public class StorageKeeper {
      * При вызове метода execute(note) в отдельном потоке запускается метод, удаляющий заметку с данным noteId
      * из баз данных SQLite и Firebase.
      */
-    public class DeleteNoteTask extends AsyncTask<Integer, Void, Void> {
+    public class DeleteNoteTask extends AsyncTask<Note, Void, Void> {
         @Override
-        protected Void doInBackground(Integer... noteId) {
-            if (noteId.length != 1)
-                throw new IllegalArgumentException (noteId.length + " parameters passed, expected 1");
-            deleteNote(noteId[0]);
+        protected Void doInBackground(Note... note) {
+            if (note.length != 1)
+                throw new IllegalArgumentException (note.length + " parameters passed, expected 1");
+            deleteNote(note[0]);
             return null;
         }
     }
 
-    private void deleteNote(int noteId){
-        //найти ключ firebase
-        String firebaseNoteKey = getFirebaseNoteKeyByCursor(getCursorByNoteId(noteId));
+    private void deleteNote(final Note note){
 
         //удалить из sqlite
         mDatabase.delete(
                 DatabaseConstants.Notes.TABLE_NAME,
                 DatabaseConstants.Notes.Columns.NOTE_ID + " = ? ",
-                new String[]{Integer.toString(noteId)}
+                new String[]{Integer.toString(note.getId())}
         );
         //todo: так, стоп. как firebase о ней узнает, если из sqlite эта запись удалена? по-хорошему, здесь нужна новая таблица для удаляемых заметок, из которой заметки будут удаляться после того, как будут удалены из firebase...
 
         //удалить из firebase
-        if (firebaseNoteKey != null) {
-            deleteNoteFromFirebase(mCurrentUserFirebaseId, firebaseNoteKey);
+        if (note.getFirebaseId() != null) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    deleteNoteFromFirebase(mCurrentUserFirebaseId, note);
+                }
+            }).start();
         }
     }
 
@@ -640,13 +671,22 @@ public class StorageKeeper {
      * @param notepad объект класса Notepad, который будет сохранен в базе данных.
      */
     private void addNotepadToFirebase(String firebaseUserId, final Notepad notepad) {
+        try {
+            FIREBASE_SEMAPHORE.acquire();
+            //fixme проблема! пока доступ к семафору не будет получен, диалог не закроется. вот отстой. Что, если для всех обращений к FB создать ЕЩЕ поток?..
+        }
+        catch (InterruptedException ex) {
+            Log.e("adding notepad to FB", ex.getMessage(), ex);
+        }
+        Log.d("adding notepad to FB", "addition started, thread = " + Thread.currentThread() + ", notepad = " + notepad); //thread: AsyncTask #X
         mReference.child(firebaseUserId).child(DatabaseConstants.Notepads.TABLE_NAME).push().setValue(parseNotepadToMap(notepad), new DatabaseReference.CompletionListener() {
             @Override
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
-                Log.d("New notepad added", "key = " + databaseReference.getKey());
+                Log.d("New notepad added", "key = " + databaseReference.getKey() + ", current thread = " + Thread.currentThread());//thread: main(!), для каждого! значит ли это, что весь контент лиснеров тоже надо в отдельный поток запихать?..
                 changeNotepadFirebaseStatus(notepad, DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
                 notepad.setFirebaseId(databaseReference.getKey());
                 updateNotepadFirebaseIdInSQLite(notepad);
+                FIREBASE_SEMAPHORE.release();
             }
         });
     }
@@ -666,30 +706,51 @@ public class StorageKeeper {
      * @param note объект класса Note, который будет сохранен в базе данных.
      */
     private void addNoteToFirebase(String firebaseUserId, final Note note) {
+        try {
+            FIREBASE_SEMAPHORE.acquire();
+        }
+        catch (InterruptedException ex) {
+            Log.e("adding note to FB", ex.getMessage(), ex);
+        }
+        Log.d("adding note to FB", "addition started, thread = " + Thread.currentThread() + ", note = " + note);
         note.setFirebaseNotepadId(getFirebaseNotepadKeyByCursor(getCursorByNotepadId(note.getNotepadId())));
-        //fixme: иногда метод просто не успевает его получить. Если заметка добавляется в блокнот сразу после создания первого, например.
+        //fixme: иногда метод просто не успевает получить firebase id блокнота. Если заметка добавляется в блокнот сразу после создания первого, например. Решение проблемы, очевидно, во многопоточности! (еееееее)
 
         mReference.child(firebaseUserId).child(DatabaseConstants.Notes.TABLE_NAME).push().setValue(parseNoteToMap(note), new DatabaseReference.CompletionListener() {
             @Override
             public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
-                Log.d("New note added", "key = " + databaseReference.getKey());
+                Log.d("New note added", "key = " + databaseReference.getKey() + ", current thread = " + Thread.currentThread());
                 note.setFirebaseId(databaseReference.getKey());
                 updateNoteFirebaseIdInSQLite(note);
                 changeNoteFirebaseStatus(note, DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
+                FIREBASE_SEMAPHORE.release();
             }
         });
     }
 
-    private void deleteNoteFromFirebase(String firebaseUserId, String firebaseNoteKey) {
-        mReference.child(firebaseUserId).child(DatabaseConstants.Notes.TABLE_NAME).child(firebaseNoteKey).removeValue().addOnSuccessListener(new OnSuccessListener<Void>() {
+    private void deleteNoteFromFirebase(String firebaseUserId, final Note note) {
+        try {
+            FIREBASE_SEMAPHORE.acquire();
+        }
+        catch (InterruptedException ex) {
+            Log.e("delete notepad from FB", ex.getMessage(), ex);
+        }
+        mReference.child(firebaseUserId).child(DatabaseConstants.Notes.TABLE_NAME).child(note.getFirebaseId()).removeValue().addOnSuccessListener(new OnSuccessListener<Void>() {
             @Override
             public void onSuccess(Void aVoid) {
-                Log.d("Firebase deletion: done", "note deleted from firebase.");
+                Log.d("delete notepad from FB", "note deleted from firebase.");
+                FIREBASE_SEMAPHORE.release();
             }
         });
     }
 
     private void updateNoteInFirebase(String firebaseUserId, final Note note) {
+        try {
+            FIREBASE_SEMAPHORE.acquire();
+        }
+        catch (InterruptedException ex) {
+            Log.e("updating note in FB", ex.getMessage(), ex);
+        }
         note.setFirebaseNotepadId(getFirebaseNotepadKeyByCursor(getCursorByNotepadId(note.getNotepadId())));
 
         mReference.child(firebaseUserId).child(DatabaseConstants.Notes.TABLE_NAME).child(note.getFirebaseId()).setValue(parseNoteToMap(note)).addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -697,16 +758,24 @@ public class StorageKeeper {
             public void onSuccess(Void aVoid) {
                 Log.d("Firebase update: done", note + " updated in firebase.");
                 changeNoteFirebaseStatus(note, DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
+                FIREBASE_SEMAPHORE.release();
             }
         });
     }
 
     private void updateNotepadInFirebase(String firebaseUserId, final Notepad notepad) {
+        try {
+            FIREBASE_SEMAPHORE.acquire();
+        }
+        catch (InterruptedException ex) {
+            Log.e("updating notepad in FB", ex.getMessage(), ex);
+        }
         mReference.child(firebaseUserId).child(DatabaseConstants.Notepads.TABLE_NAME).child(notepad.getFirebaseId()).setValue(parseNotepadToMap(notepad)).addOnSuccessListener(new OnSuccessListener<Void>() {
             @Override
             public void onSuccess(Void aVoid) {
                 Log.d("Firebase update: done", notepad + " updated in firebase.");
                 changeNotepadFirebaseStatus(notepad, DatabaseConstants.FirebaseCodes.SYNCHRONIZED);
+                FIREBASE_SEMAPHORE.release();
             }
         });
     }

@@ -173,7 +173,7 @@ public class NotesListFragment extends AbstractListFragment<Note> {
                                 @Override
                                 public void onClick(DialogInterface dialogInterface, int i) {
                                     StorageKeeper.DeleteNoteTask deleteNoteTask = StorageKeeper.getInstance(getActivity(), getArguments().getString(ARG_FIREBASE_ID)).new DeleteNoteTask();
-                                    deleteNoteTask.execute(mNote.getId());
+                                    deleteNoteTask.execute(mNote);
                                     updateUI();
                                 }
                             })
