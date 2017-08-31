@@ -123,7 +123,7 @@ public class FirebaseLoginActivity extends AppCompatActivity {
 
     private void logUserIn(FirebaseUser user) {
         //todo: добавить верификацию по email
-        logUser(user); //Crashlytics assistance
+        InitializeCrashlytics(user);
         int currentUserId = returnUserIdByEmail(user.getEmail());
         Log.d("User is signed in", "his/her id = " + currentUserId);
         //todo: вот тут, по идее, должен запускаться метод синхронизации!
@@ -131,7 +131,7 @@ public class FirebaseLoginActivity extends AppCompatActivity {
         finish();
     }
 
-    private void logUser(FirebaseUser user) {
+    private void InitializeCrashlytics(FirebaseUser user) {
         Crashlytics.setUserIdentifier(user.getUid());
         Crashlytics.setUserEmail(user.getEmail());
         Crashlytics.setUserName(user.getDisplayName());

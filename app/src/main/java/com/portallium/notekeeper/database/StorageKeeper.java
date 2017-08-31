@@ -15,10 +15,7 @@ import com.portallium.notekeeper.beans.Note;
 import com.portallium.notekeeper.beans.Notepad;
 import com.portallium.notekeeper.exceptions.DuplicateUsersException;
 import com.portallium.notekeeper.exceptions.NoSuchNotepadException;
-import com.portallium.notekeeper.utilities.PasswordEncryptionHelper;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -72,34 +69,19 @@ public class StorageKeeper {
      * UserLoginTask класса FirebaseLoginActivity. Для этого метода уже создается отдельный поток.
      * @return id созданного пользователя. Если пользователя создать не удалось, возвращается -1.
      */
-    private int addUser(String email, String password)
+    private int addUser(String email)
     {
-        try {
-            //todo: окончательно избавиться от наследия прошлой системы авторизации.
-            byte[] salt = PasswordEncryptionHelper.generateSalt();
-            byte[] encryptedPassword = PasswordEncryptionHelper.getEncryptedPassword(password, salt);
-            ContentValues values = new ContentValues();
-            values.put(DatabaseConstants.Users.Columns.LOGIN, email);
-            values.put(DatabaseConstants.Users.Columns.ENCRYPTED_PASSWORD, encryptedPassword);
-            values.put(DatabaseConstants.Users.Columns.SALT, salt);
-            mDatabase.insert(DatabaseConstants.Users.TABLE_NAME, null, values);
+        ContentValues values = new ContentValues();
+        values.put(DatabaseConstants.Users.Columns.LOGIN, email);
+        mDatabase.insert(DatabaseConstants.Users.TABLE_NAME, null, values);
 
-            try (Cursor newUserCursor = mDatabase.query(
-                    DatabaseConstants.Users.TABLE_NAME,
-                    new String[] {DatabaseConstants.Users.Columns.ID},
-                    DatabaseConstants.Users.Columns.LOGIN + " = ?",
-                    new String[] {email},
-                    null, null, null)) {
-                newUserCursor.moveToFirst();
-                int newUserId = newUserCursor.getInt(newUserCursor.getColumnIndex(DatabaseConstants.Users.Columns.ID));
-                int newNotepadId = addNotepadToDatabase(new Notepad(newUserId, DEFAULT_NOTEPAD_TITLE)); //Добавляем новому пользователю дефолтный блокнот.
-                addNoteToDatabase(new Note(newNotepadId, newUserId, DEFAULT_NOTE_TITLE, DEFAULT_NOTE_TEXT));
-                return newUserId;
-            }
-        }
-        catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
-            Log.e("addUser", ex.getMessage(), ex.getCause());
-            return -1;
+        //находим нового юзера и добавляем первый блокнот и первую заметку
+        try (Cursor newUserCursor = getUserCursorByEmail(email)) {
+            newUserCursor.moveToFirst();
+            int newUserId = newUserCursor.getInt(newUserCursor.getColumnIndex(DatabaseConstants.Users.Columns.ID));
+            int newNotepadId = addNotepadToDatabase(new Notepad(newUserId, DEFAULT_NOTEPAD_TITLE)); //Добавляем новому пользователю дефолтный блокнот.
+            addNoteToDatabase(new Note(newNotepadId, newUserId, DEFAULT_NOTE_TITLE, DEFAULT_NOTE_TEXT));
+            return newUserId;
         }
     }
 
@@ -134,7 +116,7 @@ public class StorageKeeper {
         try (Cursor users = getUserCursorByEmail(email)) {
             users.moveToFirst();
             if (users.getCount() == 0) { //такого пользователя на обнаружено
-                return addUser(email, email);
+                return addUser(email);
                 //я оставил этот метод в неприкосновенности, чтобы сохранить обратную совместимость со старым механизмом авторизации.
             } else if (users.getCount() > 1) {
                 throw new DuplicateUsersException("Holy-moly, we've got two users with the same login. How did that happen?");
@@ -367,7 +349,6 @@ public class StorageKeeper {
         }
     }
 
-    //TODO: не забывай: все методы для обращения к БД должны быть private, все обертки-классы AsyncTask - public
     /**
      * @since commit #7 в курсоре блокноты расставлены по УБЫВАНИЮ id, потому что выводить на экран
      * сначала свежесозданные блокноты логичнее.
@@ -471,10 +452,15 @@ public class StorageKeeper {
                 DatabaseConstants.Notes.Columns.NOTE_ID + " = ? ",
                 new String[]{Integer.toString(note.getId())}
         );
-        //todo: так, стоп. как firebase о ней узнает, если из sqlite эта запись удалена? по-хорошему, здесь нужна новая таблица для удаляемых заметок, из которой заметки будут удаляться после того, как будут удалены из firebase...
 
-        //удалить из firebase
+        //если заметка была добавлена в firebase, попробовать удалить ее оттуда
         if (note.getFirebaseId() != null) {
+            //добавим сначала упоминание о заметке в таблицу DeletedNotes, если удалить из firebase сразу не получится
+            //todo: не забыть потом попробовать удалить весь контент этой таблицы при следующем вызове метода синхронизации
+            ContentValues values = new ContentValues();
+            values.put(DatabaseConstants.DeletedNotes.Columns.FIREBASE_ID, note.getFirebaseId());
+            mDatabase.insert(DatabaseConstants.DeletedNotes.TABLE_NAME, null, values);
+
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -515,33 +501,6 @@ public class StorageKeeper {
                 throw new NoSuchNotepadException("No notepad with id = " + notepadId);
             cursor.moveToFirst();
             return cursor.getString(cursor.getColumnIndex(DatabaseConstants.Notepads.Columns.TITLE));
-        }
-    }
-
-    private Cursor getCursorByNoteId(int noteId) {
-        return mDatabase.query(
-                DatabaseConstants.Notes.TABLE_NAME,
-                null,
-                DatabaseConstants.Notes.Columns.NOTE_ID + " = ?",
-                new String[]{Integer.toString(noteId)},
-                null, null, null
-        );
-    }
-
-    private String getFirebaseNoteKeyByCursor(Cursor noteCursor) {
-        noteCursor.moveToFirst();
-        String firebaseNoteKey = noteCursor.getString(noteCursor.getColumnIndex(DatabaseConstants.Notes.Columns.FIREBASE_ID));
-        noteCursor.close();
-        return firebaseNoteKey;
-    }
-
-    public class GetNotepadFirebaseIdByLocalId extends AsyncTask<Integer, Void, String> {
-        @Override
-        protected String doInBackground(Integer... notepadId) {
-            if (notepadId.length != 1) {
-                throw new IllegalArgumentException(notepadId.length + " parameters passed, expected 1");
-            }
-            return getFirebaseNotepadKeyByCursor(getCursorByNotepadId(notepadId[0]));
         }
     }
 
@@ -713,6 +672,14 @@ public class StorageKeeper {
             @Override
             public void onSuccess(Void aVoid) {
                 Log.d("delete notepad from FB", "note deleted from firebase.");
+
+                //удалить упоминание о заметке из deleted_notes.
+                mDatabase.delete(
+                        DatabaseConstants.DeletedNotes.TABLE_NAME,
+                        DatabaseConstants.DeletedNotes.Columns.FIREBASE_ID + " = ? ",
+                        new String[]{note.getFirebaseId()}
+                );
+
                 FIREBASE_SEMAPHORE.release();
             }
         });

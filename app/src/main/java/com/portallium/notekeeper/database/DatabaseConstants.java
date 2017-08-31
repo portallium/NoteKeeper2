@@ -15,8 +15,6 @@ public final class DatabaseConstants {
         public static final class Columns {
             public static final String ID = "_id";
             public static final String LOGIN = "login";
-            public static final String ENCRYPTED_PASSWORD = "encrypted_password";
-            public static final String SALT = "salt";
         }
     }
 
@@ -53,6 +51,18 @@ public final class DatabaseConstants {
             public static final String FIREBASE_STATUS = "firebase_status";
             public static final String FIREBASE_NOTEPAD_ID = "firebase_notepad_id";
             //`в этой колонке данных не будет больше никогда. проследить за этим.
+        }
+    }
+
+    /**
+     * DeletedNotes - это таблица, в которой складируются упоминания о удаляемых из SQLite заметках, которые по каким-то причинам
+     * (например, отсутствие интернета) не получилось удалить из Firebase сразу же.
+     */
+    public static final class DeletedNotes {
+        public static final String TABLE_NAME = "deleted_notes";
+
+        public static final class Columns {
+            public static final String FIREBASE_ID = "firebase_id";
         }
     }
 
