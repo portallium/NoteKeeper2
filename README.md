@@ -1,5 +1,11 @@
 # NoteKeeper2
 
+Changes in commits ##10-11:
+- All firebase updates' attempts are now automatically organised to a queue, so none will start until there are any  unsucceeded updates.
+- All notes that were deleted from local storage but weren't from Firebase are now stored in a separate table, so they will be deleted from Firebase eventually.
+- Major code quality improvements.
+- Minor performance improvements.
+
 Changes in commit #9:
 - Every update or deletion of a note or a notepad is now backed up in Firebase if the device is connected to the Internet.
 - Notes' and notepads' firebase IDs are now stored in the SQLite DB in order to implement constant synchronization of SQLite and Firebase. (Coming in future releases.)
