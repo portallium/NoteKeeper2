@@ -8,11 +8,9 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 import com.portallium.notekeeper.beans.Note;
 import com.portallium.notekeeper.beans.Notepad;
 import com.portallium.notekeeper.exceptions.DuplicateUsersException;
@@ -53,28 +51,6 @@ public class StorageKeeper {
     private StorageKeeper(Context context) {
         mDatabase = new DatabaseHelper(context.getApplicationContext()).getWritableDatabase();
         mReference = FirebaseDatabase.getInstance().getReference();
-    }
-
-    //fixme: запускать этот метод в отдельном потоке. На время его выполнения закрыть БД для модификации другими потоками.
-    private void synchronizeNotepads(int localUserId) {
-
-        //сначала собираем в списки все присутствующие в SQLite и Firebase блокноты
-        List<Notepad> localNotepadsList = getUserNotepadsAsList(localUserId);
-        final List<Notepad> firebaseNotepadsList = new ArrayList<>();
-        mReference.child(mCurrentUserFirebaseId).child(DatabaseConstants.Notepads.TABLE_NAME).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                firebaseNotepadsList.add(dataSnapshot.getValue(Notepad.class));
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Log.e("Firebase conn. error", databaseError.getMessage());
-                //видимо, нет соединения. синхронизация закончилась неудачей, и надо как-то выйти из метода synchronize.
-                //todo: влепить тост. типа, синхронизация не удалась, живи теперь с этим.
-            }
-        }); //этот лиснер триггернется один раз для каждой записи, чтобы собрать их все из firebase в список, а потом самоуничтожится.
-        //todo: для добавления блокнотов из firebase в sqlite можно использовать threadPoolExecutor. еще: сделать эту операцию единой транзакцией.
     }
 
     /**
@@ -673,7 +649,6 @@ public class StorageKeeper {
     private void addNotepadToFirebase(String firebaseUserId, final Notepad notepad) {
         try {
             FIREBASE_SEMAPHORE.acquire();
-            //fixme проблема! пока доступ к семафору не будет получен, диалог не закроется. вот отстой. Что, если для всех обращений к FB создать ЕЩЕ поток?..
         }
         catch (InterruptedException ex) {
             Log.e("adding notepad to FB", ex.getMessage(), ex);
@@ -714,7 +689,6 @@ public class StorageKeeper {
         }
         Log.d("adding note to FB", "addition started, thread = " + Thread.currentThread() + ", note = " + note);
         note.setFirebaseNotepadId(getFirebaseNotepadKeyByCursor(getCursorByNotepadId(note.getNotepadId())));
-        //fixme: иногда метод просто не успевает получить firebase id блокнота. Если заметка добавляется в блокнот сразу после создания первого, например. Решение проблемы, очевидно, во многопоточности! (еееееее)
 
         mReference.child(firebaseUserId).child(DatabaseConstants.Notes.TABLE_NAME).push().setValue(parseNoteToMap(note), new DatabaseReference.CompletionListener() {
             @Override
