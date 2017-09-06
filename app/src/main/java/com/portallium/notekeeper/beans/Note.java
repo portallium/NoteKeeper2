@@ -18,8 +18,6 @@ public class Note implements Serializable {
     private int mFirebaseStatus;
     private String mFirebaseNotepadId;
 
-    private Note() {} //этот конструктор нужен firebase. В коде непосредственно не используется.
-
     public Note(int id, int notepadId, int creatorId, String title, Date creationDate, String text, String firebaseId, int firebaseStatus) {
         this(id, notepadId, creatorId, title, creationDate, text);
         this.mFirebaseId = firebaseId;
@@ -135,8 +133,7 @@ public class Note implements Serializable {
 
     /**
      * Метод, проверяющий идентичность двух заметок.
-     * Заметки считаются идентичными, если их параметры (id, notepadId, creatorId, Text, Title, CreationDate)
-     * равны между собой.
+     * Заметки считаются идентичными, если их параметры (название, текст, дата создания) равны между собой.
      * Метод используется для сравнения заметок, полученных из Firebase и SQLite.
      * @param obj вторая заметка
      * @return true, если заметки идентичны, false иначе
@@ -150,28 +147,21 @@ public class Note implements Serializable {
         if (obj.getClass() != Note.class)
             return false;
         Note note = (Note) obj;
-        return ((!mFirebaseId.isEmpty() && mFirebaseId.equals(note.getFirebaseId()))
-                || (this.mId == note.getId()
-                && this.mNotepadId == note.getNotepadId()
-                && this.mCreatorId == note.getCreatorId()
-                && this.mText.equals(note.getText())
+        return (this.mText.equals(note.getText())
                 && this.mTitle.equals(note.getTitle())
-                && this.mCreationDate.getTime() == note.getCreationDate().getTime()));
+                && this.mCreationDate.getTime() == note.getCreationDate().getTime());
     }
 
     /**
-     * Метод подсчитывает хэш-код заметки. Он вычисляется как сумма хэш-кодов полей объекта.
+     * Метод подсчитывает хэш-код заметки.
      * @return хэш-код заметки.
      */
     @Override
     public int hashCode() {
-        return Integer.valueOf(mId).hashCode() +
-                Integer.valueOf(mNotepadId).hashCode() +
-                Integer.valueOf(mCreatorId).hashCode() +
-                mText.hashCode() +
-                mTitle.hashCode() +
-                mCreationDate.hashCode();
+        return mText.hashCode() + mTitle.hashCode() + mCreationDate.hashCode();
     }
+
+
 
     @Override
     public String toString() {

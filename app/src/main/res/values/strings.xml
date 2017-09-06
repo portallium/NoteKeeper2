@@ -37,4 +37,8 @@
     <string name="create_notepad">Create new notepad</string>
     <string name="title_activity_login_firebase">Sign in</string>
     <string name="firebase_verification_required">Please verify your account before using Note Keeper. We\'ve sent an email to %1$s</string>
+    <string name="synchronize_icon">Synchronize your notes with the cloud</string>
+    <string name="synchronize_fail">Synchronization failed. Try again.</string>
+    <string name="synchronize_success">Synchronization successful!</string>
+    <string name="synchronize_start">Synchronization started...</string>
 </resources>

@@ -1,6 +1,8 @@
 package com.portallium.notekeeper.beans;
 
 
+import com.portallium.notekeeper.database.DatabaseConstants;
+
 import java.io.Serializable;
 import java.util.Date;
 
@@ -60,7 +62,21 @@ public class Notepad implements Serializable {
         mId = ID_NOT_YET_ASSIGNED;
     }
 
-    private Notepad() {} //этот конструктор нужен Firebase.
+    /**
+     * Конструктор, используемый для парсинга полученной из Firebase Map'ы в структуру данных Notepad.
+     * @param creatorId локальный id создателя заметки
+     * @param title название блокнота, полученное из firebase
+     * @param creationDate дата создания блокнота, полученная из firebase
+     * @param firebaseId firebase id блокнота
+     */
+    public Notepad(int creatorId, String title, Date creationDate, String firebaseId) {
+        this.mId = ID_NOT_YET_ASSIGNED;
+        this.mCreatorId = creatorId;
+        this.mTitle = title;
+        this.mCreationDate = creationDate;
+        this.mFirebaseId = firebaseId;
+        this.mFirebaseStatus = DatabaseConstants.FirebaseCodes.SYNCHRONIZED;
+    }
 
     public int getCreatorId() {
         return mCreatorId;
@@ -103,9 +119,8 @@ public class Notepad implements Serializable {
     }
 
     /**
-     * Метод, проверяющий идентичность двух блокнотов.
-     * Два блокнота идентичны, если все их поля, кроме mFirebaseId, равны между собой.
-     * Поле mFirebaseId в расчет не принимается.
+     * Метод, проверяющий идентичность двух блокнотов. Используется в сервисе синхронизации.
+     * Два блокнота идентичны, если созданы в одну миллисекунду с одним названием.
      * @param o блокнот, с которым производится сравнение.
      * @return true, если блокноты идентичны, false иначе.
      */
@@ -116,12 +131,8 @@ public class Notepad implements Serializable {
 
         Notepad notepad = (Notepad) o;
 
-        return (mTitle.equals(notepad.mTitle)
-                && mId == notepad.mId
-                && mCreatorId == notepad.mCreatorId
-                && mCreationDate.equals(notepad.mCreationDate));
+        return (mTitle.equals(notepad.mTitle) && mCreationDate.equals(notepad.mCreationDate));
     }
-    //TODO: а этот метод ТОЧНО то, что мне нужно? Потому что я в сомнениях.
 
     /**
      * Метод подсчитывает хэш-код блокнота.
@@ -129,10 +140,8 @@ public class Notepad implements Serializable {
      */
     @Override
     public int hashCode() {
-        int result = mCreatorId;
-        result = 31 * result + (mTitle != null ? mTitle.hashCode() : 0);
+        int result = mTitle.hashCode();
         result = 31 * result + (mCreationDate != null ? mCreationDate.hashCode() : 0);
-        result = 31 * result + mId;
         return result;
     }
 

@@ -86,6 +86,7 @@ public class NoteParametersPickerDialogFragment extends DialogFragment {
                 })
                 .create();
         //TODO: переписать так, чтобы при неверном инпуте (либо ошибке добавления в БД) пользователь оставался в диалоге (то же - в notepad).
+        //fixme: очень важно! что, если блокнотов совсем нет? Куда добавлять штуку?
     }
 
     public static NoteParametersPickerDialogFragment newInstance(int userId, String firebaseId) {

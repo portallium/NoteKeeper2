@@ -92,7 +92,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 sqLiteDatabase.execSQL("ALTER TABLE " + DatabaseConstants.Notes.TABLE_NAME + " ADD COLUMN " +
                         DatabaseConstants.Notes.Columns.FIREBASE_STATUS + " INTEGER DEFAULT " +
                         DatabaseConstants.FirebaseCodes.NEEDS_ADDITION);
-                //todo: и вот тут тоже вызывается метод synchronize.
                 Log.d("DB schema updated", "from v.2 to v.3");
             }
             case 3: {

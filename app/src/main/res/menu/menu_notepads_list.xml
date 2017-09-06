@@ -3,24 +3,31 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:title="@string/synchronize_icon"
+        android:icon="@drawable/ic_sync_white_24dp"
+        android:id="@+id/icon_synchronize"
+        app:showAsAction="ifRoom">
+    </item>
+
+    <item
         android:title="@string/add_notepad"
         android:icon="@drawable/ic_create_new_folder_white_24dp"
         android:id="@+id/icon_new_notepad"
-        app:showAsAction="ifRoom|withText">
+        app:showAsAction="ifRoom">
     </item>
 
     <item
         android:id="@+id/icon_new_note"
         android:title="@string/add_note"
         android:icon="@drawable/ic_note_add_white_24dp"
-        app:showAsAction="ifRoom|withText">
+        app:showAsAction="ifRoom">
     </item>
 
     <item
         android:id="@+id/icon_log_out"
         android:title="@string/log_out"
         android:icon="@drawable/ic_input_white_24dp"
-        app:showAsAction="ifRoom|withText">
+        app:showAsAction="ifRoom">
     </item>
 
 </menu>
